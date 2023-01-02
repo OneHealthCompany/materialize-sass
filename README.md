@@ -7,7 +7,7 @@ example: http://materialize.labs.my/
 source: https://github.com/mkhairi/materialize-rails
 
 # Notices
-This master branch now v1.1.0-alpha
+This master branch now v1.2.1
 
 Documentation for previous releases (v0.100.*) are available [this branch.](https://github.com/mkhairi/materialize-sass/tree/v0.100)
 
@@ -21,7 +21,7 @@ gem 'materialize-sass', '~> 1.0.0'
 or github master branch
 
 ```ruby
-gem 'materialize-sass', github: 'mkhairi/materialize-sass
+gem 'materialize-sass', github: 'OneHealthCompany/materialize-sass'
 ```
 
 

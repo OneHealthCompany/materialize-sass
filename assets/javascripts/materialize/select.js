@@ -1,506 +1,391 @@
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-(function ($) {
+(function($) {
   'use strict';
 
-  var _defaults = {
+  let _defaults = {
     classes: '',
     dropdownOptions: {}
   };
 
-  /**
-   * @class
-   *
-   */
-
-  var FormSelect = function (_Component) {
-    _inherits(FormSelect, _Component);
-
-    /**
-     * Construct FormSelect instance
-     * @constructor
-     * @param {Element} el
-     * @param {Object} options
-     */
-    function FormSelect(el, options) {
-      _classCallCheck(this, FormSelect);
-
-      // Don't init if browser default version
-      var _this = _possibleConstructorReturn(this, (FormSelect.__proto__ || Object.getPrototypeOf(FormSelect)).call(this, FormSelect, el, options));
-
-      if (_this.$el.hasClass('browser-default')) {
-        return _possibleConstructorReturn(_this);
-      }
-
-      _this.el.M_FormSelect = _this;
-
-      /**
-       * Options for the select
-       * @member FormSelect#options
-       */
-      _this.options = $.extend({}, FormSelect.defaults, options);
-
-      _this.isMultiple = _this.$el.prop('multiple');
-
-      // Setup
-      _this.el.tabIndex = -1;
-      _this._keysSelected = {};
-      _this._valueDict = {}; // Maps key to original and generated option element.
-      _this._setupDropdown();
-
-      _this._setupEventHandlers();
-      return _this;
+  class FormSelect extends Component {
+    constructor(el, options) {
+      super(FormSelect, el, options);
+      if (this.$el.hasClass('browser-default')) return;
+      this.el.M_FormSelect = this;
+      this.options = $.extend({}, FormSelect.defaults, options);
+      this.isMultiple = this.$el.prop('multiple');
+      this.el.tabIndex = -1;
+      this._values = [];
+      this.labelEl = null;
+      this._labelFor = false;
+      this._setupDropdown();
+      this._setupEventHandlers();
     }
-
-    _createClass(FormSelect, [{
-      key: 'destroy',
-
-
-      /**
-       * Teardown component
-       */
-      value: function destroy() {
-        this._removeEventHandlers();
-        this._removeDropdown();
-        this.el.M_FormSelect = undefined;
-      }
-
-      /**
-       * Setup Event Handlers
-       */
-
-    }, {
-      key: '_setupEventHandlers',
-      value: function _setupEventHandlers() {
-        var _this2 = this;
-
-        this._handleSelectChangeBound = this._handleSelectChange.bind(this);
-        this._handleOptionClickBound = this._handleOptionClick.bind(this);
-        this._handleInputClickBound = this._handleInputClick.bind(this);
-
-        $(this.dropdownOptions).find('li:not(.optgroup)').each(function (el) {
-          el.addEventListener('click', _this2._handleOptionClickBound);
-        });
-        this.el.addEventListener('change', this._handleSelectChangeBound);
-        this.input.addEventListener('click', this._handleInputClickBound);
-      }
-
-      /**
-       * Remove Event Handlers
-       */
-
-    }, {
-      key: '_removeEventHandlers',
-      value: function _removeEventHandlers() {
-        var _this3 = this;
-
-        $(this.dropdownOptions).find('li:not(.optgroup)').each(function (el) {
-          el.removeEventListener('click', _this3._handleOptionClickBound);
-        });
-        this.el.removeEventListener('change', this._handleSelectChangeBound);
-        this.input.removeEventListener('click', this._handleInputClickBound);
-      }
-
-      /**
-       * Handle Select Change
-       * @param {Event} e
-       */
-
-    }, {
-      key: '_handleSelectChange',
-      value: function _handleSelectChange(e) {
-        this._setValueToInput();
-      }
-
-      /**
-       * Handle Option Click
-       * @param {Event} e
-       */
-
-    }, {
-      key: '_handleOptionClick',
-      value: function _handleOptionClick(e) {
-        e.preventDefault();
-        var optionEl = $(e.target).closest('li')[0];
-        this._selectOption(optionEl);
-        e.stopPropagation();
-      }
-    }, {
-      key: '_selectOption',
-      value: function _selectOption(optionEl) {
-        var key = optionEl.id;
-        if (!$(optionEl).hasClass('disabled') && !$(optionEl).hasClass('optgroup') && key.length) {
-          var selected = true;
-
-          if (this.isMultiple) {
-            // Deselect placeholder option if still selected.
-            var placeholderOption = $(this.dropdownOptions).find('li.disabled.selected');
-            if (placeholderOption.length) {
-              placeholderOption.removeClass('selected');
-              placeholderOption.find('input[type="checkbox"]').prop('checked', false);
-              this._toggleEntryFromArray(placeholderOption[0].id);
-            }
-            selected = this._toggleEntryFromArray(key);
-          } else {
-            $(this.dropdownOptions).find('li').removeClass('selected');
-            $(optionEl).toggleClass('selected', selected);
-            this._keysSelected = {};
-            this._keysSelected[optionEl.id] = true;
-          }
-
-          // Set selected on original select option
-          // Only trigger if selected state changed
-          var prevSelected = $(this._valueDict[key].el).prop('selected');
-          if (prevSelected !== selected) {
-            $(this._valueDict[key].el).prop('selected', selected);
-            this.$el.trigger('change');
-          }
-        }
-
-        if (!this.isMultiple) {
-          this.dropdown.close();
-        }
-      }
-
-      /**
-       * Handle Input Click
-       */
-
-    }, {
-      key: '_handleInputClick',
-      value: function _handleInputClick() {
-        if (this.dropdown && this.dropdown.isOpen) {
-          this._setValueToInput();
-          this._setSelectedStates();
-        }
-      }
-
-      /**
-       * Setup dropdown
-       */
-
-    }, {
-      key: '_setupDropdown',
-      value: function _setupDropdown() {
-        var _this4 = this;
-
-        this.wrapper = document.createElement('div');
-        $(this.wrapper).addClass('select-wrapper ' + this.options.classes);
-        this.$el.before($(this.wrapper));
-        // Move actual select element into overflow hidden wrapper
-        var $hideSelect = $('<div class="hide-select"></div>');
-        $(this.wrapper).append($hideSelect);
-        $hideSelect[0].appendChild(this.el);
-
-        if (this.el.disabled) {
-          this.wrapper.classList.add('disabled');
-        }
-
-        // Create dropdown
-        this.$selectOptions = this.$el.children('option, optgroup');
-        this.dropdownOptions = document.createElement('ul');
-        this.dropdownOptions.id = 'select-options-' + M.guid();
-        $(this.dropdownOptions).addClass('dropdown-content select-dropdown ' + (this.isMultiple ? 'multiple-select-dropdown' : ''));
-
-        // Create dropdown structure.
-        if (this.$selectOptions.length) {
-          this.$selectOptions.each(function (el) {
-            if ($(el).is('option')) {
-              // Direct descendant option.
-              var optionEl = void 0;
-              if (_this4.isMultiple) {
-                optionEl = _this4._appendOptionWithIcon(_this4.$el, el, 'multiple');
-              } else {
-                optionEl = _this4._appendOptionWithIcon(_this4.$el, el);
-              }
-
-              _this4._addOptionToValueDict(el, optionEl);
-            } else if ($(el).is('optgroup')) {
-              // Optgroup.
-              var selectOptions = $(el).children('option');
-              $(_this4.dropdownOptions).append($('<li class="optgroup"><span>' + el.getAttribute('label') + '</span></li>')[0]);
-
-              selectOptions.each(function (el) {
-                var optionEl = _this4._appendOptionWithIcon(_this4.$el, el, 'optgroup-option');
-                _this4._addOptionToValueDict(el, optionEl);
-              });
-            }
+    static get defaults() {
+      return _defaults;
+    }
+    static init(els, options) {
+      return super.init(this, els, options);
+    }
+    static getInstance(el) {
+      let domElem = !!el.jquery ? el[0] : el;
+      return domElem.M_FormSelect;
+    }
+    destroy() {
+      // Returns label to its original owner
+      if (this._labelFor) this.labelEl.setAttribute("for", this.el.id);
+      this._removeEventHandlers();
+      this._removeDropdown();
+      this.el.M_FormSelect = undefined;
+    }
+    _setupEventHandlers() {
+      this._handleSelectChangeBound = this._handleSelectChange.bind(this);
+      this._handleOptionClickBound = this._handleOptionClick.bind(this);
+      this._handleInputClickBound = this._handleInputClick.bind(this);
+      $(this.dropdownOptions)
+        .find('li:not(.optgroup)')
+        .each((el) => {
+          el.addEventListener('click', this._handleOptionClickBound);
+          el.addEventListener('keydown', (e) => {
+            if (e.key === " " || e.key === "Enter") this._handleOptionClickBound(e);
           });
+        });
+      this.el.addEventListener('change', this._handleSelectChangeBound);
+      this.input.addEventListener('click', this._handleInputClickBound);
+    }
+    _removeEventHandlers() {
+      $(this.dropdownOptions)
+        .find('li:not(.optgroup)')
+        .each((el) => {
+          el.removeEventListener('click', this._handleOptionClickBound);
+        });
+      this.el.removeEventListener('change', this._handleSelectChangeBound);
+      this.input.removeEventListener('click', this._handleInputClickBound);
+    }
+    _handleSelectChange(e) {
+      this._setValueToInput();
+    }
+    _handleOptionClick(e) {
+      e.preventDefault();
+      let virtualOption = $(e.target).closest('li')[0];
+      this._selectOptionElement(virtualOption);
+      e.stopPropagation();
+    }
+    _arraysEqual(a, b) {
+      if (a === b) return true;
+      if (a == null || b == null) return false;
+      if (a.length !== b.length) return false;
+      for (let i = 0; i < a.length; ++i) if (a[i] !== b[i]) return false;
+      return true;
+    }
+    _selectOptionElement(virtualOption) {
+      if (!$(virtualOption).hasClass('disabled') && !$(virtualOption).hasClass('optgroup')) {
+        const value = this._values.filter((value) => value.optionEl === virtualOption)[0];
+        const previousSelectedValues = this.getSelectedValues();
+        if (this.isMultiple) {
+          // Multi-Select
+          this._toggleEntryFromArray(value);
+        } else {
+          // Single-Select
+          this._deselectAll();
+          this._selectValue(value);
         }
-
-        $(this.wrapper).append(this.dropdownOptions);
-
-        // Add input dropdown
-        this.input = document.createElement('input');
-        $(this.input).addClass('select-dropdown dropdown-trigger');
-        this.input.setAttribute('type', 'text');
-        this.input.setAttribute('readonly', 'true');
-        this.input.setAttribute('data-target', this.dropdownOptions.id);
-        if (this.el.disabled) {
-          $(this.input).prop('disabled', 'true');
-        }
-
-        $(this.wrapper).prepend(this.input);
+        // Refresh Input-Text
         this._setValueToInput();
-
-        // Add caret
-        var dropdownIcon = $('<svg class="caret" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
-        $(this.wrapper).prepend(dropdownIcon[0]);
-
-        // Initialize dropdown
-        if (!this.el.disabled) {
-          var dropdownOptions = $.extend({}, this.options.dropdownOptions);
-          var userOnOpenEnd = dropdownOptions.onOpenEnd;
-
-          // Add callback for centering selected option when dropdown content is scrollable
-          dropdownOptions.onOpenEnd = function (el) {
-            var selectedOption = $(_this4.dropdownOptions).find('.selected').first();
-
-            if (selectedOption.length) {
-              // Focus selected option in dropdown
-              M.keyDown = true;
-              _this4.dropdown.focusedIndex = selectedOption.index();
-              _this4.dropdown._focusFocusedItem();
-              M.keyDown = false;
-
-              // Handle scrolling to selected option
-              if (_this4.dropdown.isScrollable) {
-                var scrollOffset = selectedOption[0].getBoundingClientRect().top - _this4.dropdownOptions.getBoundingClientRect().top; // scroll to selected option
-                scrollOffset -= _this4.dropdownOptions.clientHeight / 2; // center in dropdown
-                _this4.dropdownOptions.scrollTop = scrollOffset;
-              }
-            }
-
-            // Handle user declared onOpenEnd if needed
-            if (userOnOpenEnd && typeof userOnOpenEnd === 'function') {
-              userOnOpenEnd.call(_this4.dropdown, _this4.el);
-            }
-          };
-
-          // Prevent dropdown from closing too early
-          dropdownOptions.closeOnClick = false;
-
-          this.dropdown = M.Dropdown.init(this.input, dropdownOptions);
-        }
-
-        // Add initial selections
+        // Trigger Change-Event only when data is different
+        const actualSelectedValues = this.getSelectedValues();
+        const selectionHasChanged = !this._arraysEqual(
+          previousSelectedValues,
+          actualSelectedValues
+        );
+        if (selectionHasChanged) this.$el.trigger('change');
+      }
+      if (!this.isMultiple) this.dropdown.close();
+    }
+    _handleInputClick() {
+      if (this.dropdown && this.dropdown.isOpen) {  
+        this._setValueToInput();
         this._setSelectedStates();
       }
+    }
+    _setupDropdown() {
+      this.wrapper = document.createElement('div');
+      $(this.wrapper).addClass('select-wrapper ' + this.options.classes);
+      this.$el.before($(this.wrapper));
 
-      /**
-       * Add option to value dict
-       * @param {Element} el  original option element
-       * @param {Element} optionEl  generated option element
-       */
+      // Move actual select element into overflow hidden wrapper
+      let $hideSelect = $('<div class="hide-select"></div>');
+      $(this.wrapper).append($hideSelect);
+      $hideSelect[0].appendChild(this.el);
 
-    }, {
-      key: '_addOptionToValueDict',
-      value: function _addOptionToValueDict(el, optionEl) {
-        var index = Object.keys(this._valueDict).length;
-        var key = this.dropdownOptions.id + index;
-        var obj = {};
-        optionEl.id = key;
+      if (this.el.disabled) this.wrapper.classList.add('disabled');
 
-        obj.el = el;
-        obj.optionEl = optionEl;
-        this._valueDict[key] = obj;
-      }
+      // Create dropdown
+      this.$selectOptions = this.$el.children('option, optgroup');
+      this.dropdownOptions = document.createElement('ul');
+      this.dropdownOptions.id = `select-options-${M.guid()}`;
+      $(this.dropdownOptions).addClass(
+        'dropdown-content select-dropdown ' + (this.isMultiple ? 'multiple-select-dropdown' : '')
+      );
+      this.dropdownOptions.setAttribute("role", "listbox");
+      this.dropdownOptions.setAttribute("aria-multiselectable", this.isMultiple);
 
-      /**
-       * Remove dropdown
-       */
-
-    }, {
-      key: '_removeDropdown',
-      value: function _removeDropdown() {
-        $(this.wrapper).find('.caret').remove();
-        $(this.input).remove();
-        $(this.dropdownOptions).remove();
-        $(this.wrapper).before(this.$el);
-        $(this.wrapper).remove();
-      }
-
-      /**
-       * Setup dropdown
-       * @param {Element} select  select element
-       * @param {Element} option  option element from select
-       * @param {String} type
-       * @return {Element}  option element added
-       */
-
-    }, {
-      key: '_appendOptionWithIcon',
-      value: function _appendOptionWithIcon(select, option, type) {
-        // Add disabled attr if disabled
-        var disabledClass = option.disabled ? 'disabled ' : '';
-        var optgroupClass = type === 'optgroup-option' ? 'optgroup-option ' : '';
-        var multipleCheckbox = this.isMultiple ? '<label><input type="checkbox"' + disabledClass + '"/><span>' + option.innerHTML + '</span></label>' : option.innerHTML;
-        var liEl = $('<li></li>');
-        var spanEl = $('<span></span>');
-        spanEl.html(multipleCheckbox);
-        liEl.addClass(disabledClass + ' ' + optgroupClass);
-        liEl.append(spanEl);
-
-        // add icons
-        var iconUrl = option.getAttribute('data-icon');
-        var classes = option.getAttribute('class');
-        if (!!iconUrl) {
-          var imgEl = $('<img alt="" class="' + classes + '" src="' + iconUrl + '">');
-          liEl.prepend(imgEl);
-        }
-
-        // Check for multiple type.
-        $(this.dropdownOptions).append(liEl[0]);
-        return liEl[0];
-      }
-
-      /**
-       * Toggle entry from option
-       * @param {String} key  Option key
-       * @return {Boolean}  if entry was added or removed
-       */
-
-    }, {
-      key: '_toggleEntryFromArray',
-      value: function _toggleEntryFromArray(key) {
-        var notAdded = !this._keysSelected.hasOwnProperty(key);
-        var $optionLi = $(this._valueDict[key].optionEl);
-
-        if (notAdded) {
-          this._keysSelected[key] = true;
-        } else {
-          delete this._keysSelected[key];
-        }
-
-        $optionLi.toggleClass('selected', notAdded);
-
-        // Set checkbox checked value
-        $optionLi.find('input[type="checkbox"]').prop('checked', notAdded);
-
-        // use notAdded instead of true (to detect if the option is selected or not)
-        $optionLi.prop('selected', notAdded);
-
-        return notAdded;
-      }
-
-      /**
-       * Set text value to input
-       */
-
-    }, {
-      key: '_setValueToInput',
-      value: function _setValueToInput() {
-        var values = [];
-        var options = this.$el.find('option');
-
-        options.each(function (el) {
-          if ($(el).prop('selected')) {
-            var text = $(el).text().trim();
-            values.push(text);
+      // Create dropdown structure
+      if (this.$selectOptions.length) {
+        this.$selectOptions.each((realOption) => {
+          if ($(realOption).is('option')) {
+            // Option
+            const virtualOption = this._createAndAppendOptionWithIcon(
+              realOption,
+              this.isMultiple ? 'multiple' : undefined
+            );
+            this._addOptionToValues(realOption, virtualOption);
+          } else if ($(realOption).is('optgroup')) {
+            // Optgroup
+            const selectOptions = $(realOption).children('option');
+            let lId = "opt-group-" + M.guid();
+            let groupParent = $(
+              `<li class="optgroup" role="group" aria-labelledby="${lId}" tabindex="-1"><span id="${lId}" role="presentation">${realOption.getAttribute('label')}</span></li>`
+            )[0];
+            let groupChildren = [];
+            $(this.dropdownOptions).append(groupParent);
+            selectOptions.each((realOption) => {
+              const virtualOption = this._createAndAppendOptionWithIcon(
+                realOption,
+                'optgroup-option'
+              );
+              let cId = "opt-child-" + M.guid();
+              virtualOption.id = cId;
+              groupChildren.push(cId);
+              this._addOptionToValues(realOption, virtualOption);
+            });
+            groupParent.setAttribute("aria-owns", groupChildren.join(" "));
           }
         });
+      }
+      $(this.wrapper).append(this.dropdownOptions);
 
-        if (!values.length) {
-          var firstDisabled = this.$el.find('option:disabled').eq(0);
-          if (firstDisabled.length && firstDisabled[0].value === '') {
-            values.push(firstDisabled.text());
+      // Add input dropdown
+      this.input = document.createElement('input');
+      this.input.id = "m_select-input-" + M.guid();
+      $(this.input).addClass('select-dropdown dropdown-trigger');
+      this.input.setAttribute('type', 'text');
+      this.input.setAttribute('readonly', 'true');
+      this.input.setAttribute('data-target', this.dropdownOptions.id);
+      this.input.setAttribute('aria-readonly', 'true');
+      this.input.setAttribute("aria-required", this.el.hasAttribute("required"));
+      if (this.el.disabled) $(this.input).prop('disabled', 'true');
+
+      // Makes new element to assume HTML's select label and
+      //   aria-attributes, if exists
+      if (this.el.hasAttribute("aria-labelledby")){
+        this.labelEl = document.getElementById(this.el.getAttribute("aria-labelledby"));
+      }
+      else if (this.el.id != ""){
+        let lbl = $(`label[for='${this.el.id}']`);
+        if (lbl.length){
+          this.labelEl = lbl[0];
+          this.labelEl.removeAttribute("for");
+          this._labelFor = true;
+        }
+      }
+      // Tries to find a valid label in parent element
+      if (!this.labelEl){
+        let el = this.el.parentElement;
+        if (el) el = el.getElementsByTagName("label")[0];
+        if (el) this.labelEl = el;
+      }
+      if (this.labelEl && this.labelEl.id == ""){
+        this.labelEl.id = "m_select-label-" + M.guid();
+      }
+
+      if (this.labelEl){
+        this.labelEl.setAttribute("for", this.input.id);
+        this.dropdownOptions.setAttribute("aria-labelledby", this.labelEl.id);
+      }
+      else this.dropdownOptions.setAttribute("aria-label", "");
+
+      let attrs = this.el.attributes;
+      for (let i = 0; i < attrs.length; ++i){
+        const attr = attrs[i];
+        if (attr.name.startsWith("aria-"))
+          this.input.setAttribute(attr.name, attr.value);
+      }
+
+      // Adds aria-attributes to input element
+      this.input.setAttribute("role", "combobox");
+      this.input.setAttribute("aria-owns", this.dropdownOptions.id);
+      this.input.setAttribute("aria-controls", this.dropdownOptions.id);
+      this.input.setAttribute("aria-expanded", false);
+
+      $(this.wrapper).prepend(this.input);
+      this._setValueToInput();
+
+      // Add caret
+      let dropdownIcon = $(
+        '<svg class="caret" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'
+      );
+      $(this.wrapper).prepend(dropdownIcon[0]);
+      // Initialize dropdown
+      if (!this.el.disabled) {
+        let dropdownOptions = $.extend({}, this.options.dropdownOptions);
+        dropdownOptions.coverTrigger = false;
+        let userOnOpenEnd = dropdownOptions.onOpenEnd;
+        let userOnCloseEnd = dropdownOptions.onCloseEnd;
+        // Add callback for centering selected option when dropdown content is scrollable
+        dropdownOptions.onOpenEnd = (el) => {
+          let selectedOption = $(this.dropdownOptions)
+            .find('.selected')
+            .first();
+          if (selectedOption.length) {
+            // Focus selected option in dropdown
+            M.keyDown = true;
+            this.dropdown.focusedIndex = selectedOption.index();
+            this.dropdown._focusFocusedItem();
+            M.keyDown = false;
+            // Handle scrolling to selected option
+            if (this.dropdown.isScrollable) {
+              let scrollOffset =
+                selectedOption[0].getBoundingClientRect().top -
+                this.dropdownOptions.getBoundingClientRect().top; // scroll to selected option
+              scrollOffset -= this.dropdownOptions.clientHeight / 2; // center in dropdown
+              this.dropdownOptions.scrollTop = scrollOffset;
+            }
           }
+          // Sets "aria-expanded" to "true"
+          this.input.setAttribute("aria-expanded", true);
+          // Handle user declared onOpenEnd if needed
+          if (userOnOpenEnd && typeof userOnOpenEnd === 'function')
+            userOnOpenEnd.call(this.dropdown, this.el);
+        };
+        // Add callback for reseting "expanded" state
+        dropdownOptions.onCloseEnd = (el) => {
+          // Sets "aria-expanded" to "false"
+          this.input.setAttribute("aria-expanded", false);
+          // Handle user declared onOpenEnd if needed
+          if (userOnCloseEnd && typeof userOnCloseEnd === 'function')
+            userOnCloseEnd.call(this.dropdown, this.el);
+        };
+        // Prevent dropdown from closing too early
+        dropdownOptions.closeOnClick = false;
+        this.dropdown = M.Dropdown.init(this.input, dropdownOptions);
+      }
+      // Add initial selections
+      this._setSelectedStates();
+    }
+    _addOptionToValues(realOption, virtualOption) {
+      this._values.push({ el: realOption, optionEl: virtualOption });
+    }
+    _removeDropdown() {
+      $(this.wrapper)
+        .find('.caret')
+        .remove();
+      $(this.input).remove();
+      $(this.dropdownOptions).remove();
+      $(this.wrapper).before(this.$el);
+      $(this.wrapper).remove();
+    }
+    _createAndAppendOptionWithIcon(realOption, type) {
+      const li = document.createElement('li');
+      li.setAttribute("role", "option");
+      if (realOption.disabled){
+        li.classList.add('disabled');
+        li.setAttribute("aria-disabled", true);
+      }
+      if (type === 'optgroup-option') li.classList.add(type);
+      // Text / Checkbox
+      const span = document.createElement('span');
+      if (this.isMultiple)
+        span.innerHTML = `<label><input type="checkbox"${
+          realOption.disabled ? ' disabled="disabled"' : ''
+        }><span>${realOption.innerHTML}</span></label>`;
+      else span.innerHTML = realOption.innerHTML;
+      li.appendChild(span);
+      // add Icon
+      const iconUrl = realOption.getAttribute('data-icon');
+      const classes = realOption.getAttribute('class');
+      if (iconUrl) {
+        const img = $(`<img alt="" class="${classes}" src="${iconUrl}">`);
+        img[0].setAttribute("aria-hidden", true);
+        li.prepend(img[0]);
+      }
+      // Check for multiple type
+      $(this.dropdownOptions).append(li);
+      return li;
+    }
+
+    _selectValue(value) {
+      value.el.selected = true;
+      value.optionEl.classList.add('selected');
+      value.optionEl.setAttribute("aria-selected", true);
+      const checkbox = value.optionEl.querySelector('input[type="checkbox"]');
+      if (checkbox) checkbox.checked = true;
+    }
+    _deselectValue(value) {
+      value.el.selected = false;
+      value.optionEl.classList.remove('selected');
+      value.optionEl.setAttribute("aria-selected", false);
+      const checkbox = value.optionEl.querySelector('input[type="checkbox"]');
+      if (checkbox) checkbox.checked = false;
+    }
+    _deselectAll() {
+      this._values.forEach((value) => {
+        this._deselectValue(value);
+      });
+    }
+    _isValueSelected(value) {
+      const realValues = this.getSelectedValues();
+      return realValues.some((realValue) => realValue === value.el.value);
+    }
+    _toggleEntryFromArray(value) {
+      const isSelected = this._isValueSelected(value);
+      if (isSelected) this._deselectValue(value);
+      else this._selectValue(value);
+    }
+    _getSelectedOptions() {
+      return Array.prototype.filter.call(this.el.selectedOptions, (realOption) => realOption);
+    }
+
+    _setValueToInput() {
+      const realOptions = this._getSelectedOptions();
+      const values = this._values.filter((value) => realOptions.indexOf(value.el) >= 0);
+      const texts = values.map((value) => value.optionEl.querySelector('span').innerText.trim());
+      // Set input-text to first Option with empty value which indicates a description like "choose your option"
+      if (texts.length === 0) {
+        const firstDisabledOption = this.$el.find('option:disabled').eq(0);
+        if (firstDisabledOption.length > 0 && firstDisabledOption[0].value === '') {
+          this.input.value = firstDisabledOption.text();
+          return;
         }
-
-        this.input.value = values.join(', ');
       }
-
-      /**
-       * Set selected state of dropdown to match actual select element
-       */
-
-    }, {
-      key: '_setSelectedStates',
-      value: function _setSelectedStates() {
-        this._keysSelected = {};
-
-        for (var key in this._valueDict) {
-          var option = this._valueDict[key];
-          var optionIsSelected = $(option.el).prop('selected');
-          $(option.optionEl).find('input[type="checkbox"]').prop('checked', optionIsSelected);
-          if (optionIsSelected) {
-            this._activateOption($(this.dropdownOptions), $(option.optionEl));
-            this._keysSelected[key] = true;
-          } else {
-            $(option.optionEl).removeClass('selected');
-          }
+      this.input.value = texts.join(', ');
+    }
+    _setSelectedStates() {
+      this._values.forEach((value) => {
+        const optionIsSelected = $(value.el).prop('selected');
+        $(value.optionEl)
+          .find('input[type="checkbox"]')
+          .prop('checked', optionIsSelected);
+        if (optionIsSelected) {
+          this._activateOption($(this.dropdownOptions), $(value.optionEl));
+        } else {
+          $(value.optionEl).removeClass('selected');
+          $(value.optionEl).attr("aria-selected", false);
         }
-      }
+      });
+    }
+    _activateOption(ul, li) {
+      if (!li) return;
+      if (!this.isMultiple) ul.find('li.selected').removeClass('selected');
+      $(li).addClass('selected');
+      $(li).attr("aria-selected", true);
+    }
 
-      /**
-       * Make option as selected and scroll to selected position
-       * @param {jQuery} collection  Select options jQuery element
-       * @param {Element} newOption  element of the new option
-       */
-
-    }, {
-      key: '_activateOption',
-      value: function _activateOption(collection, newOption) {
-        if (newOption) {
-          if (!this.isMultiple) {
-            collection.find('li.selected').removeClass('selected');
-          }
-          var option = $(newOption);
-          option.addClass('selected');
-        }
-      }
-
-      /**
-       * Get Selected Values
-       * @return {Array}  Array of selected values
-       */
-
-    }, {
-      key: 'getSelectedValues',
-      value: function getSelectedValues() {
-        var selectedValues = [];
-        for (var key in this._keysSelected) {
-          selectedValues.push(this._valueDict[key].el.value);
-        }
-        return selectedValues;
-      }
-    }], [{
-      key: 'init',
-      value: function init(els, options) {
-        return _get(FormSelect.__proto__ || Object.getPrototypeOf(FormSelect), 'init', this).call(this, this, els, options);
-      }
-
-      /**
-       * Get Instance
-       */
-
-    }, {
-      key: 'getInstance',
-      value: function getInstance(el) {
-        var domElem = !!el.jquery ? el[0] : el;
-        return domElem.M_FormSelect;
-      }
-    }, {
-      key: 'defaults',
-      get: function () {
-        return _defaults;
-      }
-    }]);
-
-    return FormSelect;
-  }(Component);
+    getSelectedValues() {
+      return this._getSelectedOptions().map((realOption) => realOption.value);
+    }
+  }
 
   M.FormSelect = FormSelect;
 
-  if (M.jQueryLoaded) {
-    M.initializeJqueryWrapper(FormSelect, 'formSelect', 'M_FormSelect');
-  }
+  if (M.jQueryLoaded) M.initializeJqueryWrapper(FormSelect, 'formSelect', 'M_FormSelect');
 })(cash);

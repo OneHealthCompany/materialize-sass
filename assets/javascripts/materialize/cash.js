@@ -2,30 +2,20 @@
 (function (factory) {
   window.cash = factory();
 })(function () {
-  var doc = document,
-      win = window,
-      ArrayProto = Array.prototype,
-      slice = ArrayProto.slice,
-      filter = ArrayProto.filter,
-      push = ArrayProto.push;
+  var doc = document, win = window, ArrayProto = Array.prototype, slice = ArrayProto.slice, filter = ArrayProto.filter, push = ArrayProto.push;
 
-  var noop = function () {},
-      isFunction = function (item) {
+  var noop = function () {}, isFunction = function (item) {
     // @see https://crbug.com/568448
     return typeof item === typeof noop && item.call;
-  },
-      isString = function (item) {
+  }, isString = function (item) {
     return typeof item === typeof "";
   };
 
-  var idMatch = /^#[\w-]*$/,
-      classMatch = /^\.[\w-]*$/,
-      htmlMatch = /<.+>/,
-      singlet = /^\w+$/;
+  var idMatch = /^#[\w-]*$/, classMatch = /^\.[\w-]*$/, htmlMatch = /<.+>/, singlet = /^\w+$/;
 
   function find(selector, context) {
     context = context || doc;
-    var elems = classMatch.test(selector) ? context.getElementsByClassName(selector.slice(1)) : singlet.test(selector) ? context.getElementsByTagName(selector) : context.querySelectorAll(selector);
+    var elems = (classMatch.test(selector) ? context.getElementsByClassName(selector.slice(1)) : singlet.test(selector) ? context.getElementsByTagName(selector) : context.querySelectorAll(selector));
     return elems;
   }
 
@@ -61,18 +51,16 @@
       return selector;
     }
 
-    var elems = selector,
-        i = 0,
-        length;
+    var elems = selector, i = 0, length;
 
     if (isString(selector)) {
-      elems = idMatch.test(selector) ?
+      elems = (idMatch.test(selector) ?
       // If an ID use the faster getElementById check
       doc.getElementById(selector.slice(1)) : htmlMatch.test(selector) ?
       // If HTML, parse it into real elements
       parseHTML(selector) :
       // else use `find`
-      find(selector, context);
+      find(selector, context));
 
       // If function, use as shortcut for DOM ready
     } else if (isFunction(selector)) {
@@ -121,9 +109,7 @@
   cash.extend = fn.extend = function (target) {
     target = target || {};
 
-    var args = slice.call(arguments),
-        length = args.length,
-        i = 1;
+    var args = slice.call(arguments), length = args.length, i = 1;
 
     if (args.length === 1) {
       target = this;
@@ -145,8 +131,7 @@
   };
 
   function each(collection, callback) {
-    var l = collection.length,
-        i = 0;
+    var l = collection.length, i = 0;
 
     for (; i < l; i++) {
       if (callback.call(collection[i], collection[i], i, collection) === false) {
@@ -162,17 +147,16 @@
 
   function getCompareFunction(selector) {
     return (
-      /* Use browser's `matches` function if string */
-      isString(selector) ? matches :
-      /* Match a cash element */
-      selector.cash ? function (el) {
-        return selector.is(el);
-      } :
-      /* Direct comparison */
-      function (el, selector) {
-        return el === selector;
-      }
-    );
+    /* Use browser's `matches` function if string */
+    isString(selector) ? matches :
+    /* Match a cash element */
+    selector.cash ? function (el) {
+      return selector.is(el);
+    } :
+    /* Direct comparison */
+    function (el, selector) {
+      return el === selector;
+    });
   }
 
   function unique(collection) {
@@ -183,9 +167,7 @@
 
   cash.extend({
     merge: function (first, second) {
-      var len = +second.length,
-          i = first.length,
-          j = 0;
+      var len = +second.length, i = first.length, j = 0;
 
       for (; j < len; i++, j++) {
         first[i] = second[j];
@@ -208,11 +190,11 @@
   var uid = cash.uid = "_cash" + Date.now();
 
   function getDataCache(node) {
-    return node[uid] = node[uid] || {};
+    return (node[uid] = node[uid] || {});
   }
 
   function setData(node, key, value) {
-    return getDataCache(node)[key] = value;
+    return (getDataCache(node)[key] = value);
   }
 
   function getData(node, key) {
@@ -237,9 +219,9 @@
   fn.extend({
     data: function (name, value) {
       if (isString(name)) {
-        return value === undefined ? getData(this[0], name) : this.each(function (v) {
+        return (value === undefined ? getData(this[0], name) : this.each(function (v) {
           return setData(v, name, value);
-        });
+        }));
       }
 
       for (var key in name) {
@@ -264,7 +246,7 @@
   }
 
   function hasClass(v, c) {
-    return v.classList ? v.classList.contains(c) : new RegExp("(^| )" + c + "( |$)", "gi").test(v.className);
+    return (v.classList ? v.classList.contains(c) : new RegExp("(^| )" + c + "( |$)", "gi").test(v.className));
   }
 
   function addClass(v, c, spacedName) {
@@ -287,12 +269,12 @@
     addClass: function (c) {
       var classes = getClasses(c);
 
-      return classes ? this.each(function (v) {
+      return (classes ? this.each(function (v) {
         var spacedName = " " + v.className + " ";
         each(classes, function (c) {
           addClass(v, c, spacedName);
         });
-      }) : this;
+      }) : this);
     },
 
     attr: function (name, value) {
@@ -322,8 +304,7 @@
     },
 
     hasClass: function (c) {
-      var check = false,
-          classes = getClasses(c);
+      var check = false, classes = getClasses(c);
       if (classes && classes.length) {
         this.each(function (v) {
           check = hasClass(v, classes[0]);
@@ -335,9 +316,9 @@
 
     prop: function (name, value) {
       if (isString(name)) {
-        return value === undefined ? this[0][name] : this.each(function (v) {
+        return (value === undefined ? this[0][name] : this.each(function (v) {
           v[name] = value;
-        });
+        }));
       }
 
       for (var key in name) {
@@ -362,11 +343,11 @@
         return this.attr("class", "");
       }
       var classes = getClasses(c);
-      return classes ? this.each(function (v) {
+      return (classes ? this.each(function (v) {
         each(classes, function (c) {
           removeClass(v, c);
         });
-      }) : this;
+      }) : this);
     },
 
     removeProp: function (name) {
@@ -380,7 +361,7 @@
         return this[state ? "addClass" : "removeClass"](c);
       }
       var classes = getClasses(c);
-      return classes ? this.each(function (v) {
+      return (classes ? this.each(function (v) {
         var spacedName = " " + v.className + " ";
         each(classes, function (c) {
           if (hasClass(v, c)) {
@@ -389,7 +370,7 @@
             addClass(v, c, spacedName);
           }
         });
-      }) : this;
+      }) : this);
     } });
 
   fn.extend({
@@ -411,7 +392,7 @@
         return this;
       }
 
-      var comparator = isFunction(selector) ? selector : getCompareFunction(selector);
+      var comparator = (isFunction(selector) ? selector : getCompareFunction(selector));
 
       return cash(filter.call(this, function (e) {
         return comparator(e, selector);
@@ -426,12 +407,11 @@
       if (index === undefined) {
         return slice.call(this);
       }
-      return index < 0 ? this[index + this.length] : this[index];
+      return (index < 0 ? this[index + this.length] : this[index]);
     },
 
     index: function (elem) {
-      var child = elem ? cash(elem)[0] : this[0],
-          collection = elem ? this : cash(child).parent().children();
+      var child = elem ? cash(elem)[0] : this[0], collection = elem ? this : cash(child).parent().children();
       return slice.call(collection).indexOf(child);
     },
 
@@ -441,21 +421,17 @@
 
   });
 
-  var camelCase = function () {
-    var camelRegex = /(?:^\w|[A-Z]|\b\w)/g,
-        whiteSpace = /[\s-_]+/g;
+  var camelCase = (function () {
+    var camelRegex = /(?:^\w|[A-Z]|\b\w)/g, whiteSpace = /[\s-_]+/g;
     return function (str) {
       return str.replace(camelRegex, function (letter, index) {
         return letter[index === 0 ? "toLowerCase" : "toUpperCase"]();
       }).replace(whiteSpace, "");
     };
-  }();
+  }());
 
-  var getPrefixedProp = function () {
-    var cache = {},
-        doc = document,
-        div = doc.createElement("div"),
-        style = div.style;
+  var getPrefixedProp = (function () {
+    var cache = {}, doc = document, div = doc.createElement("div"), style = div.style;
 
     return function (prop) {
       prop = camelCase(prop);
@@ -463,9 +439,7 @@
         return cache[prop];
       }
 
-      var ucProp = prop.charAt(0).toUpperCase() + prop.slice(1),
-          prefixes = ["webkit", "moz", "ms", "o"],
-          props = (prop + " " + prefixes.join(ucProp + " ") + ucProp).split(" ");
+      var ucProp = prop.charAt(0).toUpperCase() + prop.slice(1), prefixes = ["webkit", "moz", "ms", "o"], props = (prop + " " + (prefixes).join(ucProp + " ") + ucProp).split(" ");
 
       each(props, function (p) {
         if (p in style) {
@@ -476,7 +450,7 @@
 
       return cache[prop];
     };
-  }();
+  }());
 
   cash.prefixedProp = getPrefixedProp;
   cash.camelCase = camelCase;
@@ -485,9 +459,9 @@
     css: function (prop, value) {
       if (isString(prop)) {
         prop = getPrefixedProp(prop);
-        return arguments.length > 1 ? this.each(function (v) {
+        return (arguments.length > 1 ? this.each(function (v) {
           return v.style[prop] = value;
-        }) : win.getComputedStyle(this[0])[prop];
+        }) : win.getComputedStyle(this[0])[prop]);
       }
 
       for (var key in prop) {
@@ -527,9 +501,7 @@
   }
 
   function removeEvent(node, eventName, callback) {
-    var events = getData(node, "_cashEvents"),
-        eventCache = events && events[eventName],
-        index;
+    var events = getData(node, "_cashEvents"), eventCache = (events && events[eventName]), index;
 
     if (!eventCache) {
       return;
@@ -582,7 +554,7 @@
           var t = e.target;
           while (!matches(t, delegate)) {
             if (t === this || t === null) {
-              return t = false;
+              return (t = false);
             }
 
             t = t.parentNode;
@@ -620,7 +592,7 @@
      */
     trigger: function (eventName, data) {
       if (document.createEvent) {
-        var evt = document.createEvent('HTMLEvents');
+        let evt = document.createEvent('HTMLEvents');
         evt.initEvent(eventName, true, false);
         evt = this.extend(evt, data);
         return this.each(function (v) {
@@ -661,9 +633,9 @@
       case "select-multiple":
         return getSelectMultiple_(el);
       case "radio":
-        return el.checked ? el.value : null;
+        return (el.checked) ? el.value : null;
       case "checkbox":
-        return el.checked ? el.value : null;
+        return (el.checked) ? el.value : null;
       default:
         return el.value ? el.value : null;
     }
@@ -737,7 +709,7 @@
     each(parent, str ? function (v) {
       return v.insertAdjacentHTML(prepend ? "afterbegin" : "beforeend", child);
     } : function (v, i) {
-      return insertElement(v, i === 0 ? child : child.cloneNode(true), prepend);
+      return insertElement(v, (i === 0 ? child : child.cloneNode(true)), prepend);
     });
   }
 
@@ -777,7 +749,7 @@
       if (content === undefined) {
         return this[0].innerHTML;
       }
-      var source = content.nodeType ? content[0].outerHTML : content;
+      var source = (content.nodeType ? content[0].outerHTML : content);
       return this.each(function (v) {
         return v.innerHTML = source;
       });
@@ -786,11 +758,11 @@
     insertAfter: function (selector) {
       var _this = this;
 
+
       cash(selector).each(function (el, i) {
-        var parent = el.parentNode,
-            sibling = el.nextSibling;
+        var parent = el.parentNode, sibling = el.nextSibling;
         _this.each(function (v) {
-          parent.insertBefore(i === 0 ? v : v.cloneNode(true), sibling);
+          parent.insertBefore((i === 0 ? v : v.cloneNode(true)), sibling);
         });
       });
 
@@ -802,7 +774,7 @@
       cash(selector).each(function (el, i) {
         var parent = el.parentNode;
         _this2.each(function (v) {
-          parent.insertBefore(i === 0 ? v : v.cloneNode(true), el);
+          parent.insertBefore((i === 0 ? v : v.cloneNode(true)), el);
         });
       });
       return this;
@@ -870,9 +842,9 @@
       });
       elems = unique(elems);
 
-      return !selector ? elems : elems.filter(function (v) {
+      return (!selector ? elems : elems.filter(function (v) {
         return matches(v, selector);
-      });
+      }));
     },
 
     closest: function (selector) {
@@ -890,8 +862,7 @@
         return false;
       }
 
-      var match = false,
-          comparator = getCompareFunction(selector);
+      var match = false, comparator = getCompareFunction(selector);
 
       this.each(function (el) {
         match = comparator(el, selector);
@@ -915,11 +886,11 @@
     },
 
     has: function (selector) {
-      var comparator = isString(selector) ? function (el) {
+      var comparator = (isString(selector) ? function (el) {
         return find(selector, el).length !== 0;
       } : function (el) {
         return el.contains(selector);
-      };
+      });
 
       return this.filter(comparator);
     },
@@ -953,8 +924,7 @@
     },
 
     parents: function (selector) {
-      var last,
-          result = [];
+      var last, result = [];
 
       this.each(function (item) {
         last = item;
@@ -962,7 +932,7 @@
         while (last && last.parentNode && last !== doc.body.parentNode) {
           last = last.parentNode;
 
-          if (!selector || selector && matches(last, selector)) {
+          if (!selector || (selector && matches(last, selector))) {
             result.push(last);
           }
         }
@@ -976,8 +946,7 @@
     },
 
     siblings: function (selector) {
-      var collection = this.parent().children(selector),
-          el = this[0];
+      var collection = this.parent().children(selector), el = this[0];
 
       return collection.filter(function (i) {
         return i !== el;
@@ -985,6 +954,7 @@
     }
 
   });
+
 
   return cash;
 });

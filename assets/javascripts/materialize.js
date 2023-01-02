@@ -1,6 +1,6 @@
 /*!
- * Materialize v1.1.0-alpha (https://materializecss.github.io/materialize)
- * Copyright 2014-2021 Materialize
+ * Materialize v1.2.1 (https://materializecss.github.io/materialize)
+ * Copyright 2014-2022 Materialize
  * MIT License (https://raw.githubusercontent.com/materializecss/materialize/master/LICENSE)
  */
 var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
@@ -1003,7 +1003,618 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
   return cash;
 });
-;
+; /*!
+  * Waves v0.7.6
+  * http://fian.my.id/Waves
+  *
+  * Copyright 2014-2018 Alfiana E. Sibuea and other contributors
+  * Released under the MIT license
+  * https://github.com/fians/Waves/blob/master/LICENSE
+  */
+
+;(function (window, factory) {
+  'use strict';
+
+  // AMD. Register as an anonymous module.  Wrap in function so we have access
+  // to root via `this`.
+
+  if (typeof define === 'function' && define.amd) {
+    define([], function () {
+      window.Waves = factory.call(window);
+      document.addEventListener('DOMContentLoaded', function () {
+        window.Waves.init();
+      }, false);
+      return window.Waves;
+    });
+  }
+
+  // Node. Does not work with strict CommonJS, but only CommonJS-like
+  // environments that support module.exports, like Node.
+  else if (typeof exports === 'object') {
+      module.exports = factory.call(window);
+    }
+
+    // Browser globals.
+    else {
+        window.Waves = factory.call(window);
+        document.addEventListener('DOMContentLoaded', function () {
+          window.Waves.init();
+        }, false);
+      }
+})(typeof global === 'object' ? global : this, function () {
+  'use strict';
+
+  var Waves = Waves || {};
+  var $$ = document.querySelectorAll.bind(document);
+  var toString = Object.prototype.toString;
+  var isTouchAvailable = 'ontouchstart' in window;
+
+  /* Feature detection */
+  var passiveIfSupported = false;
+  try {
+    window.addEventListener("test", null, Object.defineProperty({}, "passive", {
+      get: function () {
+        passiveIfSupported = { passive: false };
+      }
+    }));
+  } catch (err) {}
+
+  // Find exact position of element
+  function isWindow(obj) {
+    return obj !== null && obj === obj.window;
+  }
+
+  function getWindow(elem) {
+    return isWindow(elem) ? elem : elem.nodeType === 9 && elem.defaultView;
+  }
+
+  function isObject(value) {
+    var type = typeof value;
+    return type === 'function' || type === 'object' && !!value;
+  }
+
+  function isDOMNode(obj) {
+    return isObject(obj) && obj.nodeType > 0;
+  }
+
+  function getWavesElements(nodes) {
+    var stringRepr = toString.call(nodes);
+
+    if (stringRepr === '[object String]') {
+      return $$(nodes);
+    } else if (isObject(nodes) && /^\[object (Array|HTMLCollection|NodeList|Object)\]$/.test(stringRepr) && nodes.hasOwnProperty('length')) {
+      return nodes;
+    } else if (isDOMNode(nodes)) {
+      return [nodes];
+    }
+
+    return [];
+  }
+
+  function offset(elem) {
+    var docElem,
+        win,
+        box = { top: 0, left: 0 },
+        doc = elem && elem.ownerDocument;
+
+    docElem = doc.documentElement;
+
+    if (typeof elem.getBoundingClientRect !== typeof undefined) {
+      box = elem.getBoundingClientRect();
+    }
+    win = getWindow(doc);
+    return {
+      top: box.top + win.pageYOffset - docElem.clientTop,
+      left: box.left + win.pageXOffset - docElem.clientLeft
+    };
+  }
+
+  function convertStyle(styleObj) {
+    var style = '';
+
+    for (var prop in styleObj) {
+      if (styleObj.hasOwnProperty(prop)) {
+        style += prop + ':' + styleObj[prop] + ';';
+      }
+    }
+
+    return style;
+  }
+
+  var Effect = {
+
+    // Effect duration
+    duration: 750,
+
+    // Effect delay (check for scroll before showing effect)
+    delay: 200,
+
+    show: function (e, element, velocity) {
+
+      // Disable right click
+      if (e.button === 2) {
+        return false;
+      }
+
+      element = element || this;
+
+      // Create ripple
+      var ripple = document.createElement('div');
+      ripple.className = 'waves-ripple waves-rippling';
+      element.appendChild(ripple);
+
+      // Get click coordinate and element width
+      var pos = offset(element);
+      var relativeY = 0;
+      var relativeX = 0;
+      // Support for touch devices
+      if ('touches' in e && e.touches.length) {
+        relativeY = e.touches[0].pageY - pos.top;
+        relativeX = e.touches[0].pageX - pos.left;
+      }
+      //Normal case
+      else {
+          relativeY = e.pageY - pos.top;
+          relativeX = e.pageX - pos.left;
+        }
+      // Support for synthetic events
+      relativeX = relativeX >= 0 ? relativeX : 0;
+      relativeY = relativeY >= 0 ? relativeY : 0;
+
+      var scale = 'scale(' + element.clientWidth / 100 * 3 + ')';
+      var translate = 'translate(0,0)';
+
+      if (velocity) {
+        translate = 'translate(' + velocity.x + 'px, ' + velocity.y + 'px)';
+      }
+
+      // Attach data to element
+      ripple.setAttribute('data-hold', Date.now());
+      ripple.setAttribute('data-x', relativeX);
+      ripple.setAttribute('data-y', relativeY);
+      ripple.setAttribute('data-scale', scale);
+      ripple.setAttribute('data-translate', translate);
+
+      // Set ripple position
+      var rippleStyle = {
+        top: relativeY + 'px',
+        left: relativeX + 'px'
+      };
+
+      ripple.classList.add('waves-notransition');
+      ripple.setAttribute('style', convertStyle(rippleStyle));
+      ripple.classList.remove('waves-notransition');
+
+      // Scale the ripple
+      rippleStyle['-webkit-transform'] = scale + ' ' + translate;
+      rippleStyle['-moz-transform'] = scale + ' ' + translate;
+      rippleStyle['-ms-transform'] = scale + ' ' + translate;
+      rippleStyle['-o-transform'] = scale + ' ' + translate;
+      rippleStyle.transform = scale + ' ' + translate;
+      rippleStyle.opacity = '1';
+
+      var duration = e.type === 'mousemove' ? 2500 : Effect.duration;
+      rippleStyle['-webkit-transition-duration'] = duration + 'ms';
+      rippleStyle['-moz-transition-duration'] = duration + 'ms';
+      rippleStyle['-o-transition-duration'] = duration + 'ms';
+      rippleStyle['transition-duration'] = duration + 'ms';
+
+      ripple.setAttribute('style', convertStyle(rippleStyle));
+    },
+
+    hide: function (e, element) {
+      element = element || this;
+
+      var ripples = element.getElementsByClassName('waves-rippling');
+
+      for (var i = 0, len = ripples.length; i < len; i++) {
+        removeRipple(e, element, ripples[i]);
+      }
+
+      if (isTouchAvailable) {
+        element.removeEventListener('touchend', Effect.hide);
+        element.removeEventListener('touchcancel', Effect.hide);
+      }
+
+      element.removeEventListener('mouseup', Effect.hide);
+      element.removeEventListener('mouseleave', Effect.hide);
+    }
+  };
+
+  /**
+   * Collection of wrapper for HTML element that only have single tag
+   * like <input> and <img>
+   */
+  var TagWrapper = {
+
+    // Wrap <input> tag so it can perform the effect
+    input: function (element) {
+
+      var parent = element.parentNode;
+
+      // If input already have parent just pass through
+      if (parent.tagName.toLowerCase() === 'i' && parent.classList.contains('waves-effect')) {
+        return;
+      }
+
+      // Put element class and style to the specified parent
+      var wrapper = document.createElement('i');
+      wrapper.className = element.className + ' waves-input-wrapper';
+      element.className = 'waves-button-input';
+
+      // Put element as child
+      parent.replaceChild(wrapper, element);
+      wrapper.appendChild(element);
+
+      // Apply element color and background color to wrapper
+      var elementStyle = window.getComputedStyle(element, null);
+      var color = elementStyle.color;
+      var backgroundColor = elementStyle.backgroundColor;
+
+      wrapper.setAttribute('style', 'color:' + color + ';background:' + backgroundColor);
+      element.setAttribute('style', 'background-color:rgba(0,0,0,0);');
+    },
+
+    // Wrap <img> tag so it can perform the effect
+    img: function (element) {
+
+      var parent = element.parentNode;
+
+      // If input already have parent just pass through
+      if (parent.tagName.toLowerCase() === 'i' && parent.classList.contains('waves-effect')) {
+        return;
+      }
+
+      // Put element as child
+      var wrapper = document.createElement('i');
+      parent.replaceChild(wrapper, element);
+      wrapper.appendChild(element);
+    }
+  };
+
+  /**
+   * Hide the effect and remove the ripple. Must be
+   * a separate function to pass the JSLint...
+   */
+  function removeRipple(e, el, ripple) {
+
+    // Check if the ripple still exist
+    if (!ripple) {
+      return;
+    }
+
+    ripple.classList.remove('waves-rippling');
+
+    var relativeX = ripple.getAttribute('data-x');
+    var relativeY = ripple.getAttribute('data-y');
+    var scale = ripple.getAttribute('data-scale');
+    var translate = ripple.getAttribute('data-translate');
+
+    // Get delay beetween mousedown and mouse leave
+    var diff = Date.now() - Number(ripple.getAttribute('data-hold'));
+    var delay = 350 - diff;
+
+    if (delay < 0) {
+      delay = 0;
+    }
+
+    if (e.type === 'mousemove') {
+      delay = 150;
+    }
+
+    // Fade out ripple after delay
+    var duration = e.type === 'mousemove' ? 2500 : Effect.duration;
+
+    setTimeout(function () {
+
+      var style = {
+        top: relativeY + 'px',
+        left: relativeX + 'px',
+        opacity: '0',
+
+        // Duration
+        '-webkit-transition-duration': duration + 'ms',
+        '-moz-transition-duration': duration + 'ms',
+        '-o-transition-duration': duration + 'ms',
+        'transition-duration': duration + 'ms',
+        '-webkit-transform': scale + ' ' + translate,
+        '-moz-transform': scale + ' ' + translate,
+        '-ms-transform': scale + ' ' + translate,
+        '-o-transform': scale + ' ' + translate,
+        'transform': scale + ' ' + translate
+      };
+
+      ripple.setAttribute('style', convertStyle(style));
+
+      setTimeout(function () {
+        try {
+          el.removeChild(ripple);
+        } catch (e) {
+          return false;
+        }
+      }, duration);
+    }, delay);
+  }
+
+  /**
+   * Disable mousedown event for 500ms during and after touch
+   */
+  var TouchHandler = {
+
+    /* uses an integer rather than bool so there's no issues with
+     * needing to clear timeouts if another touch event occurred
+     * within the 500ms. Cannot mouseup between touchstart and
+     * touchend, nor in the 500ms after touchend. */
+    touches: 0,
+
+    allowEvent: function (e) {
+
+      var allow = true;
+
+      if (/^(mousedown|mousemove)$/.test(e.type) && TouchHandler.touches) {
+        allow = false;
+      }
+
+      return allow;
+    },
+    registerEvent: function (e) {
+      var eType = e.type;
+
+      if (eType === 'touchstart') {
+
+        TouchHandler.touches += 1; // push
+      } else if (/^(touchend|touchcancel)$/.test(eType)) {
+
+        setTimeout(function () {
+          if (TouchHandler.touches) {
+            TouchHandler.touches -= 1; // pop after 500ms
+          }
+        }, 500);
+      }
+    }
+  };
+
+  /**
+   * Delegated click handler for .waves-effect element.
+   * returns null when .waves-effect element not in "click tree"
+   */
+  function getWavesEffectElement(e) {
+
+    if (TouchHandler.allowEvent(e) === false) {
+      return null;
+    }
+
+    var element = null;
+    var target = e.target || e.srcElement;
+
+    while (target.parentElement) {
+      if (!(target instanceof SVGElement) && target.classList.contains('waves-effect')) {
+        element = target;
+        break;
+      }
+      target = target.parentElement;
+    }
+
+    return element;
+  }
+
+  /**
+   * Bubble the click and show effect if .waves-effect elem was found
+   */
+  function showEffect(e) {
+
+    // Disable effect if element has "disabled" property on it
+    // In some cases, the event is not triggered by the current element
+    // if (e.target.getAttribute('disabled') !== null) {
+    //     return;
+    // }
+
+    var element = getWavesEffectElement(e);
+
+    if (element !== null) {
+
+      // Make it sure the element has either disabled property, disabled attribute or 'disabled' class
+      if (element.disabled || element.getAttribute('disabled') || element.classList.contains('disabled')) {
+        return;
+      }
+
+      TouchHandler.registerEvent(e);
+
+      if (e.type === 'touchstart' && Effect.delay) {
+
+        var hidden = false;
+
+        var timer = setTimeout(function () {
+          timer = null;
+          Effect.show(e, element);
+        }, Effect.delay);
+
+        var hideEffect = function (hideEvent) {
+
+          // if touch hasn't moved, and effect not yet started: start effect now
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+            Effect.show(e, element);
+          }
+          if (!hidden) {
+            hidden = true;
+            Effect.hide(hideEvent, element);
+          }
+
+          removeListeners();
+        };
+
+        var touchMove = function (moveEvent) {
+          if (timer) {
+            clearTimeout(timer);
+            timer = null;
+          }
+          hideEffect(moveEvent);
+
+          removeListeners();
+        };
+
+        element.addEventListener('touchmove', touchMove, passiveIfSupported);
+        element.addEventListener('touchend', hideEffect, passiveIfSupported);
+        element.addEventListener('touchcancel', hideEffect, passiveIfSupported);
+
+        var removeListeners = function () {
+          element.removeEventListener('touchmove', touchMove);
+          element.removeEventListener('touchend', hideEffect);
+          element.removeEventListener('touchcancel', hideEffect);
+        };
+      } else {
+
+        Effect.show(e, element);
+
+        if (isTouchAvailable) {
+          element.addEventListener('touchend', Effect.hide, passiveIfSupported);
+          element.addEventListener('touchcancel', Effect.hide, passiveIfSupported);
+        }
+
+        element.addEventListener('mouseup', Effect.hide, passiveIfSupported);
+        element.addEventListener('mouseleave', Effect.hide, passiveIfSupported);
+      }
+    }
+  }
+
+  Waves.init = function (options) {
+    var body = document.body;
+
+    options = options || {};
+
+    if ('duration' in options) {
+      Effect.duration = options.duration;
+    }
+
+    if ('delay' in options) {
+      Effect.delay = options.delay;
+    }
+
+    if (isTouchAvailable) {
+      body.addEventListener('touchstart', showEffect, passiveIfSupported);
+      body.addEventListener('touchcancel', TouchHandler.registerEvent, passiveIfSupported);
+      body.addEventListener('touchend', TouchHandler.registerEvent, passiveIfSupported);
+    }
+
+    body.addEventListener('mousedown', showEffect, passiveIfSupported);
+  };
+
+  /**
+   * Attach Waves to dynamically loaded inputs, or add .waves-effect and other
+   * waves classes to a set of elements. Set drag to true if the ripple mouseover
+   * or skimming effect should be applied to the elements.
+   */
+  Waves.attach = function (elements, classes) {
+
+    elements = getWavesElements(elements);
+
+    if (toString.call(classes) === '[object Array]') {
+      classes = classes.join(' ');
+    }
+
+    classes = classes ? ' ' + classes : '';
+
+    var element, tagName;
+
+    for (var i = 0, len = elements.length; i < len; i++) {
+
+      element = elements[i];
+      tagName = element.tagName.toLowerCase();
+
+      if (['input', 'img'].indexOf(tagName) !== -1) {
+        TagWrapper[tagName](element);
+        element = element.parentElement;
+      }
+
+      if (element.className.indexOf('waves-effect') === -1) {
+        element.className += ' waves-effect' + classes;
+      }
+    }
+  };
+
+  /**
+   * Cause a ripple to appear in an element via code.
+   */
+  Waves.ripple = function (elements, options) {
+    elements = getWavesElements(elements);
+    var elementsLen = elements.length;
+
+    options = options || {};
+    options.wait = options.wait || 0;
+    options.position = options.position || null; // default = centre of element
+
+
+    if (elementsLen) {
+      var element,
+          pos,
+          off,
+          centre = {},
+          i = 0;
+      var mousedown = {
+        type: 'mousedown',
+        button: 1
+      };
+      var hideRipple = function (mouseup, element) {
+        return function () {
+          Effect.hide(mouseup, element);
+        };
+      };
+
+      for (; i < elementsLen; i++) {
+        element = elements[i];
+        pos = options.position || {
+          x: element.clientWidth / 2,
+          y: element.clientHeight / 2
+        };
+
+        off = offset(element);
+        centre.x = off.left + pos.x;
+        centre.y = off.top + pos.y;
+
+        mousedown.pageX = centre.x;
+        mousedown.pageY = centre.y;
+
+        Effect.show(mousedown, element);
+
+        if (options.wait >= 0 && options.wait !== null) {
+          var mouseup = {
+            type: 'mouseup',
+            button: 1
+          };
+
+          setTimeout(hideRipple(mouseup, element), options.wait);
+        }
+      }
+    }
+  };
+
+  /**
+   * Remove all ripples from an element.
+   */
+  Waves.calm = function (elements) {
+    elements = getWavesElements(elements);
+    var mouseup = {
+      type: 'mouseup',
+      button: 1
+    };
+
+    for (var i = 0, len = elements.length; i < len; i++) {
+      Effect.hide(mouseup, elements[i]);
+    }
+  };
+
+  /**
+   * Deprecated API fallback
+   */
+  Waves.displayEffect = function (options) {
+    console.error('Waves.displayEffect() has been deprecated and will be removed in future version. Please use Waves.init() to initialize Waves effect');
+    Waves.init(options);
+  };
+
+  return Waves;
+});;
 var Component = function () {
   /**
    * Generic constructor for all components
@@ -1084,7 +1695,7 @@ if (typeof define === 'function' && define.amd) {
   exports.default = M;
 }
 
-M.version = '1.0.0';
+M.version = '1.2.0';
 
 M.keys = {
   TAB: 9,
@@ -1457,7 +2068,7 @@ M.throttle = function (func, wait, options) {
 /* Feature detection */
 var passiveIfSupported = false;
 try {
-  window.addEventListener("test", null, Object.defineProperty({}, "passive", {
+  window.addEventListener('test', null, Object.defineProperty({}, 'passive', {
     get: function () {
       passiveIfSupported = { passive: false };
     }
@@ -2365,7 +2976,6 @@ $jscomp.polyfill = function (e, r, p, m) {
       value: function _setupTemporaryEventHandlers() {
         // Use capture phase event handler to prevent click
         document.body.addEventListener('click', this._handleDocumentClickBound, true);
-        document.body.addEventListener('touchend', this._handleDocumentClickBound);
         document.body.addEventListener('touchmove', this._handleDocumentTouchmoveBound);
         this.dropdownEl.addEventListener('keydown', this._handleDropdownKeydownBound);
       }
@@ -2374,7 +2984,6 @@ $jscomp.polyfill = function (e, r, p, m) {
       value: function _removeTemporaryEventHandlers() {
         // Use capture phase event handler to prevent click
         document.body.removeEventListener('click', this._handleDocumentClickBound, true);
-        document.body.removeEventListener('touchend', this._handleDocumentClickBound);
         document.body.removeEventListener('touchmove', this._handleDocumentTouchmoveBound);
         this.dropdownEl.removeEventListener('keydown', this._handleDropdownKeydownBound);
       }
@@ -2592,7 +3201,9 @@ $jscomp.polyfill = function (e, r, p, m) {
       key: "_focusFocusedItem",
       value: function _focusFocusedItem() {
         if (this.focusedIndex >= 0 && this.focusedIndex < this.dropdownEl.children.length && this.options.autoFocus) {
-          this.dropdownEl.children[this.focusedIndex].classList.add('active');
+          this.dropdownEl.children[this.focusedIndex].focus({
+            preventScroll: true
+          });
           this.dropdownEl.children[this.focusedIndex].scrollIntoView({
             behavior: 'smooth',
             block: 'nearest',
@@ -2832,6 +3443,7 @@ $jscomp.polyfill = function (e, r, p, m) {
         if (!this.isOpen) {
           return;
         }
+
         this.isOpen = false;
         this.focusedIndex = -1;
 
@@ -4834,618 +5446,7 @@ $jscomp.polyfill = function (e, r, p, m) {
     M.initializeJqueryWrapper(Tooltip, 'tooltip', 'M_Tooltip');
   }
 })(cash, M.anime);
-; /*!
-  * Waves v0.7.6
-  * http://fian.my.id/Waves
-  *
-  * Copyright 2014-2018 Alfiana E. Sibuea and other contributors
-  * Released under the MIT license
-  * https://github.com/fians/Waves/blob/master/LICENSE
-  */
-
-;(function (window, factory) {
-  'use strict';
-
-  // AMD. Register as an anonymous module.  Wrap in function so we have access
-  // to root via `this`.
-
-  if (typeof define === 'function' && define.amd) {
-    define([], function () {
-      window.Waves = factory.call(window);
-      document.addEventListener('DOMContentLoaded', function () {
-        window.Waves.init();
-      }, false);
-      return window.Waves;
-    });
-  }
-
-  // Node. Does not work with strict CommonJS, but only CommonJS-like
-  // environments that support module.exports, like Node.
-  else if (typeof exports === 'object') {
-      module.exports = factory.call(window);
-    }
-
-    // Browser globals.
-    else {
-        window.Waves = factory.call(window);
-        document.addEventListener('DOMContentLoaded', function () {
-          window.Waves.init();
-        }, false);
-      }
-})(typeof global === 'object' ? global : this, function () {
-  'use strict';
-
-  var Waves = Waves || {};
-  var $$ = document.querySelectorAll.bind(document);
-  var toString = Object.prototype.toString;
-  var isTouchAvailable = 'ontouchstart' in window;
-
-  /* Feature detection */
-  var passiveIfSupported = false;
-  try {
-    window.addEventListener("test", null, Object.defineProperty({}, "passive", {
-      get: function () {
-        passiveIfSupported = { passive: false };
-      }
-    }));
-  } catch (err) {}
-
-  // Find exact position of element
-  function isWindow(obj) {
-    return obj !== null && obj === obj.window;
-  }
-
-  function getWindow(elem) {
-    return isWindow(elem) ? elem : elem.nodeType === 9 && elem.defaultView;
-  }
-
-  function isObject(value) {
-    var type = typeof value;
-    return type === 'function' || type === 'object' && !!value;
-  }
-
-  function isDOMNode(obj) {
-    return isObject(obj) && obj.nodeType > 0;
-  }
-
-  function getWavesElements(nodes) {
-    var stringRepr = toString.call(nodes);
-
-    if (stringRepr === '[object String]') {
-      return $$(nodes);
-    } else if (isObject(nodes) && /^\[object (Array|HTMLCollection|NodeList|Object)\]$/.test(stringRepr) && nodes.hasOwnProperty('length')) {
-      return nodes;
-    } else if (isDOMNode(nodes)) {
-      return [nodes];
-    }
-
-    return [];
-  }
-
-  function offset(elem) {
-    var docElem,
-        win,
-        box = { top: 0, left: 0 },
-        doc = elem && elem.ownerDocument;
-
-    docElem = doc.documentElement;
-
-    if (typeof elem.getBoundingClientRect !== typeof undefined) {
-      box = elem.getBoundingClientRect();
-    }
-    win = getWindow(doc);
-    return {
-      top: box.top + win.pageYOffset - docElem.clientTop,
-      left: box.left + win.pageXOffset - docElem.clientLeft
-    };
-  }
-
-  function convertStyle(styleObj) {
-    var style = '';
-
-    for (var prop in styleObj) {
-      if (styleObj.hasOwnProperty(prop)) {
-        style += prop + ':' + styleObj[prop] + ';';
-      }
-    }
-
-    return style;
-  }
-
-  var Effect = {
-
-    // Effect duration
-    duration: 750,
-
-    // Effect delay (check for scroll before showing effect)
-    delay: 200,
-
-    show: function (e, element, velocity) {
-
-      // Disable right click
-      if (e.button === 2) {
-        return false;
-      }
-
-      element = element || this;
-
-      // Create ripple
-      var ripple = document.createElement('div');
-      ripple.className = 'waves-ripple waves-rippling';
-      element.appendChild(ripple);
-
-      // Get click coordinate and element width
-      var pos = offset(element);
-      var relativeY = 0;
-      var relativeX = 0;
-      // Support for touch devices
-      if ('touches' in e && e.touches.length) {
-        relativeY = e.touches[0].pageY - pos.top;
-        relativeX = e.touches[0].pageX - pos.left;
-      }
-      //Normal case
-      else {
-          relativeY = e.pageY - pos.top;
-          relativeX = e.pageX - pos.left;
-        }
-      // Support for synthetic events
-      relativeX = relativeX >= 0 ? relativeX : 0;
-      relativeY = relativeY >= 0 ? relativeY : 0;
-
-      var scale = 'scale(' + element.clientWidth / 100 * 3 + ')';
-      var translate = 'translate(0,0)';
-
-      if (velocity) {
-        translate = 'translate(' + velocity.x + 'px, ' + velocity.y + 'px)';
-      }
-
-      // Attach data to element
-      ripple.setAttribute('data-hold', Date.now());
-      ripple.setAttribute('data-x', relativeX);
-      ripple.setAttribute('data-y', relativeY);
-      ripple.setAttribute('data-scale', scale);
-      ripple.setAttribute('data-translate', translate);
-
-      // Set ripple position
-      var rippleStyle = {
-        top: relativeY + 'px',
-        left: relativeX + 'px'
-      };
-
-      ripple.classList.add('waves-notransition');
-      ripple.setAttribute('style', convertStyle(rippleStyle));
-      ripple.classList.remove('waves-notransition');
-
-      // Scale the ripple
-      rippleStyle['-webkit-transform'] = scale + ' ' + translate;
-      rippleStyle['-moz-transform'] = scale + ' ' + translate;
-      rippleStyle['-ms-transform'] = scale + ' ' + translate;
-      rippleStyle['-o-transform'] = scale + ' ' + translate;
-      rippleStyle.transform = scale + ' ' + translate;
-      rippleStyle.opacity = '1';
-
-      var duration = e.type === 'mousemove' ? 2500 : Effect.duration;
-      rippleStyle['-webkit-transition-duration'] = duration + 'ms';
-      rippleStyle['-moz-transition-duration'] = duration + 'ms';
-      rippleStyle['-o-transition-duration'] = duration + 'ms';
-      rippleStyle['transition-duration'] = duration + 'ms';
-
-      ripple.setAttribute('style', convertStyle(rippleStyle));
-    },
-
-    hide: function (e, element) {
-      element = element || this;
-
-      var ripples = element.getElementsByClassName('waves-rippling');
-
-      for (var i = 0, len = ripples.length; i < len; i++) {
-        removeRipple(e, element, ripples[i]);
-      }
-
-      if (isTouchAvailable) {
-        element.removeEventListener('touchend', Effect.hide);
-        element.removeEventListener('touchcancel', Effect.hide);
-      }
-
-      element.removeEventListener('mouseup', Effect.hide);
-      element.removeEventListener('mouseleave', Effect.hide);
-    }
-  };
-
-  /**
-   * Collection of wrapper for HTML element that only have single tag
-   * like <input> and <img>
-   */
-  var TagWrapper = {
-
-    // Wrap <input> tag so it can perform the effect
-    input: function (element) {
-
-      var parent = element.parentNode;
-
-      // If input already have parent just pass through
-      if (parent.tagName.toLowerCase() === 'i' && parent.classList.contains('waves-effect')) {
-        return;
-      }
-
-      // Put element class and style to the specified parent
-      var wrapper = document.createElement('i');
-      wrapper.className = element.className + ' waves-input-wrapper';
-      element.className = 'waves-button-input';
-
-      // Put element as child
-      parent.replaceChild(wrapper, element);
-      wrapper.appendChild(element);
-
-      // Apply element color and background color to wrapper
-      var elementStyle = window.getComputedStyle(element, null);
-      var color = elementStyle.color;
-      var backgroundColor = elementStyle.backgroundColor;
-
-      wrapper.setAttribute('style', 'color:' + color + ';background:' + backgroundColor);
-      element.setAttribute('style', 'background-color:rgba(0,0,0,0);');
-    },
-
-    // Wrap <img> tag so it can perform the effect
-    img: function (element) {
-
-      var parent = element.parentNode;
-
-      // If input already have parent just pass through
-      if (parent.tagName.toLowerCase() === 'i' && parent.classList.contains('waves-effect')) {
-        return;
-      }
-
-      // Put element as child
-      var wrapper = document.createElement('i');
-      parent.replaceChild(wrapper, element);
-      wrapper.appendChild(element);
-    }
-  };
-
-  /**
-   * Hide the effect and remove the ripple. Must be
-   * a separate function to pass the JSLint...
-   */
-  function removeRipple(e, el, ripple) {
-
-    // Check if the ripple still exist
-    if (!ripple) {
-      return;
-    }
-
-    ripple.classList.remove('waves-rippling');
-
-    var relativeX = ripple.getAttribute('data-x');
-    var relativeY = ripple.getAttribute('data-y');
-    var scale = ripple.getAttribute('data-scale');
-    var translate = ripple.getAttribute('data-translate');
-
-    // Get delay beetween mousedown and mouse leave
-    var diff = Date.now() - Number(ripple.getAttribute('data-hold'));
-    var delay = 350 - diff;
-
-    if (delay < 0) {
-      delay = 0;
-    }
-
-    if (e.type === 'mousemove') {
-      delay = 150;
-    }
-
-    // Fade out ripple after delay
-    var duration = e.type === 'mousemove' ? 2500 : Effect.duration;
-
-    setTimeout(function () {
-
-      var style = {
-        top: relativeY + 'px',
-        left: relativeX + 'px',
-        opacity: '0',
-
-        // Duration
-        '-webkit-transition-duration': duration + 'ms',
-        '-moz-transition-duration': duration + 'ms',
-        '-o-transition-duration': duration + 'ms',
-        'transition-duration': duration + 'ms',
-        '-webkit-transform': scale + ' ' + translate,
-        '-moz-transform': scale + ' ' + translate,
-        '-ms-transform': scale + ' ' + translate,
-        '-o-transform': scale + ' ' + translate,
-        'transform': scale + ' ' + translate
-      };
-
-      ripple.setAttribute('style', convertStyle(style));
-
-      setTimeout(function () {
-        try {
-          el.removeChild(ripple);
-        } catch (e) {
-          return false;
-        }
-      }, duration);
-    }, delay);
-  }
-
-  /**
-   * Disable mousedown event for 500ms during and after touch
-   */
-  var TouchHandler = {
-
-    /* uses an integer rather than bool so there's no issues with
-     * needing to clear timeouts if another touch event occurred
-     * within the 500ms. Cannot mouseup between touchstart and
-     * touchend, nor in the 500ms after touchend. */
-    touches: 0,
-
-    allowEvent: function (e) {
-
-      var allow = true;
-
-      if (/^(mousedown|mousemove)$/.test(e.type) && TouchHandler.touches) {
-        allow = false;
-      }
-
-      return allow;
-    },
-    registerEvent: function (e) {
-      var eType = e.type;
-
-      if (eType === 'touchstart') {
-
-        TouchHandler.touches += 1; // push
-      } else if (/^(touchend|touchcancel)$/.test(eType)) {
-
-        setTimeout(function () {
-          if (TouchHandler.touches) {
-            TouchHandler.touches -= 1; // pop after 500ms
-          }
-        }, 500);
-      }
-    }
-  };
-
-  /**
-   * Delegated click handler for .waves-effect element.
-   * returns null when .waves-effect element not in "click tree"
-   */
-  function getWavesEffectElement(e) {
-
-    if (TouchHandler.allowEvent(e) === false) {
-      return null;
-    }
-
-    var element = null;
-    var target = e.target || e.srcElement;
-
-    while (target.parentElement) {
-      if (!(target instanceof SVGElement) && target.classList.contains('waves-effect')) {
-        element = target;
-        break;
-      }
-      target = target.parentElement;
-    }
-
-    return element;
-  }
-
-  /**
-   * Bubble the click and show effect if .waves-effect elem was found
-   */
-  function showEffect(e) {
-
-    // Disable effect if element has "disabled" property on it
-    // In some cases, the event is not triggered by the current element
-    // if (e.target.getAttribute('disabled') !== null) {
-    //     return;
-    // }
-
-    var element = getWavesEffectElement(e);
-
-    if (element !== null) {
-
-      // Make it sure the element has either disabled property, disabled attribute or 'disabled' class
-      if (element.disabled || element.getAttribute('disabled') || element.classList.contains('disabled')) {
-        return;
-      }
-
-      TouchHandler.registerEvent(e);
-
-      if (e.type === 'touchstart' && Effect.delay) {
-
-        var hidden = false;
-
-        var timer = setTimeout(function () {
-          timer = null;
-          Effect.show(e, element);
-        }, Effect.delay);
-
-        var hideEffect = function (hideEvent) {
-
-          // if touch hasn't moved, and effect not yet started: start effect now
-          if (timer) {
-            clearTimeout(timer);
-            timer = null;
-            Effect.show(e, element);
-          }
-          if (!hidden) {
-            hidden = true;
-            Effect.hide(hideEvent, element);
-          }
-
-          removeListeners();
-        };
-
-        var touchMove = function (moveEvent) {
-          if (timer) {
-            clearTimeout(timer);
-            timer = null;
-          }
-          hideEffect(moveEvent);
-
-          removeListeners();
-        };
-
-        element.addEventListener('touchmove', touchMove, passiveIfSupported);
-        element.addEventListener('touchend', hideEffect, passiveIfSupported);
-        element.addEventListener('touchcancel', hideEffect, passiveIfSupported);
-
-        var removeListeners = function () {
-          element.removeEventListener('touchmove', touchMove);
-          element.removeEventListener('touchend', hideEffect);
-          element.removeEventListener('touchcancel', hideEffect);
-        };
-      } else {
-
-        Effect.show(e, element);
-
-        if (isTouchAvailable) {
-          element.addEventListener('touchend', Effect.hide, passiveIfSupported);
-          element.addEventListener('touchcancel', Effect.hide, passiveIfSupported);
-        }
-
-        element.addEventListener('mouseup', Effect.hide, passiveIfSupported);
-        element.addEventListener('mouseleave', Effect.hide, passiveIfSupported);
-      }
-    }
-  }
-
-  Waves.init = function (options) {
-    var body = document.body;
-
-    options = options || {};
-
-    if ('duration' in options) {
-      Effect.duration = options.duration;
-    }
-
-    if ('delay' in options) {
-      Effect.delay = options.delay;
-    }
-
-    if (isTouchAvailable) {
-      body.addEventListener('touchstart', showEffect, passiveIfSupported);
-      body.addEventListener('touchcancel', TouchHandler.registerEvent, passiveIfSupported);
-      body.addEventListener('touchend', TouchHandler.registerEvent, passiveIfSupported);
-    }
-
-    body.addEventListener('mousedown', showEffect, passiveIfSupported);
-  };
-
-  /**
-   * Attach Waves to dynamically loaded inputs, or add .waves-effect and other
-   * waves classes to a set of elements. Set drag to true if the ripple mouseover
-   * or skimming effect should be applied to the elements.
-   */
-  Waves.attach = function (elements, classes) {
-
-    elements = getWavesElements(elements);
-
-    if (toString.call(classes) === '[object Array]') {
-      classes = classes.join(' ');
-    }
-
-    classes = classes ? ' ' + classes : '';
-
-    var element, tagName;
-
-    for (var i = 0, len = elements.length; i < len; i++) {
-
-      element = elements[i];
-      tagName = element.tagName.toLowerCase();
-
-      if (['input', 'img'].indexOf(tagName) !== -1) {
-        TagWrapper[tagName](element);
-        element = element.parentElement;
-      }
-
-      if (element.className.indexOf('waves-effect') === -1) {
-        element.className += ' waves-effect' + classes;
-      }
-    }
-  };
-
-  /**
-   * Cause a ripple to appear in an element via code.
-   */
-  Waves.ripple = function (elements, options) {
-    elements = getWavesElements(elements);
-    var elementsLen = elements.length;
-
-    options = options || {};
-    options.wait = options.wait || 0;
-    options.position = options.position || null; // default = centre of element
-
-
-    if (elementsLen) {
-      var element,
-          pos,
-          off,
-          centre = {},
-          i = 0;
-      var mousedown = {
-        type: 'mousedown',
-        button: 1
-      };
-      var hideRipple = function (mouseup, element) {
-        return function () {
-          Effect.hide(mouseup, element);
-        };
-      };
-
-      for (; i < elementsLen; i++) {
-        element = elements[i];
-        pos = options.position || {
-          x: element.clientWidth / 2,
-          y: element.clientHeight / 2
-        };
-
-        off = offset(element);
-        centre.x = off.left + pos.x;
-        centre.y = off.top + pos.y;
-
-        mousedown.pageX = centre.x;
-        mousedown.pageY = centre.y;
-
-        Effect.show(mousedown, element);
-
-        if (options.wait >= 0 && options.wait !== null) {
-          var mouseup = {
-            type: 'mouseup',
-            button: 1
-          };
-
-          setTimeout(hideRipple(mouseup, element), options.wait);
-        }
-      }
-    }
-  };
-
-  /**
-   * Remove all ripples from an element.
-   */
-  Waves.calm = function (elements) {
-    elements = getWavesElements(elements);
-    var mouseup = {
-      type: 'mouseup',
-      button: 1
-    };
-
-    for (var i = 0, len = elements.length; i < len; i++) {
-      Effect.hide(mouseup, elements[i]);
-    }
-  };
-
-  /**
-   * Deprecated API fallback
-   */
-  Waves.displayEffect = function (options) {
-    console.error('Waves.displayEffect() has been deprecated and will be removed in future version. Please use Waves.init() to initialize Waves effect');
-    Waves.init(options);
-  };
-
-  return Waves;
-});;(function ($, anim) {
+;(function ($, anim) {
   'use strict';
 
   var _defaults = {
@@ -5513,6 +5514,9 @@ $jscomp.polyfill = function (e, r, p, m) {
       value: function _createToast() {
         var toast = document.createElement('div');
         toast.classList.add('toast');
+        toast.setAttribute('role', 'alert');
+        toast.setAttribute('aria-live', 'assertive');
+        toast.setAttribute('aria-atomic', true);
 
         // Add custom classes onto toast
         if (!!this.options.classes.length) {
@@ -7298,10 +7302,11 @@ $jscomp.polyfill = function (e, r, p, m) {
   }
 })(cash);
 ;(function ($) {
+  var TEXT_BASED_INPUT_SELECTOR = ['input:not([type])', 'input[type=text]', 'input[type=password]', 'input[type=email]', 'input[type=url]', 'input[type=tel]', 'input[type=number]', 'input[type=search]', 'input[type=date]', 'input[type=time]', 'input[type=month]', 'input[type=datetime-local]', 'textarea'].join(',');
+
   // Function to update labels of text fields
   M.updateTextFields = function () {
-    var input_selector = 'input[type=text], input[type=password], input[type=email], input[type=url], input[type=tel], input[type=number], input[type=search], input[type=date], input[type=time], textarea';
-    $(input_selector).each(function (element, index) {
+    $(TEXT_BASED_INPUT_SELECTOR).each(function (element, index) {
       var $this = $(this);
       if (element.value.length > 0 || $(element).is(':focus') || element.autofocus || $this.attr('placeholder') !== null) {
         $this.siblings('label').addClass('active');
@@ -7428,11 +7433,8 @@ $jscomp.polyfill = function (e, r, p, m) {
   };
 
   $(document).ready(function () {
-    // Text based inputs
-    var input_selector = 'input[type=text], input[type=password], input[type=email], input[type=url], input[type=tel], input[type=number], input[type=search], input[type=date], input[type=time], textarea';
-
     // Add active if form auto complete
-    $(document).on('change', input_selector, function () {
+    $(document).on('change', TEXT_BASED_INPUT_SELECTOR, function () {
       if (this.value.length !== 0 || $(this).attr('placeholder') !== null) {
         $(this).siblings('label').addClass('active');
       }
@@ -7448,8 +7450,8 @@ $jscomp.polyfill = function (e, r, p, m) {
     $(document).on('reset', function (e) {
       var formReset = $(e.target);
       if (formReset.is('form')) {
-        formReset.find(input_selector).removeClass('valid').removeClass('invalid');
-        formReset.find(input_selector).each(function (e) {
+        formReset.find(TEXT_BASED_INPUT_SELECTOR).removeClass('valid').removeClass('invalid');
+        formReset.find(TEXT_BASED_INPUT_SELECTOR).each(function (e) {
           if (this.value.length) {
             $(this).siblings('label').removeClass('active');
           }
@@ -7472,7 +7474,7 @@ $jscomp.polyfill = function (e, r, p, m) {
      * @param {Event} e
      */
     document.addEventListener('focus', function (e) {
-      if ($(e.target).is(input_selector)) {
+      if ($(e.target).is(TEXT_BASED_INPUT_SELECTOR)) {
         $(e.target).siblings('label, .prefix').addClass('active');
       }
     }, true);
@@ -7483,7 +7485,7 @@ $jscomp.polyfill = function (e, r, p, m) {
      */
     document.addEventListener('blur', function (e) {
       var $inputElement = $(e.target);
-      if ($inputElement.is(input_selector)) {
+      if ($inputElement.is(TEXT_BASED_INPUT_SELECTOR)) {
         var selector = '.prefix';
 
         if ($inputElement[0].value.length === 0 && $inputElement[0].validity.badInput !== true && $inputElement.attr('placeholder') === null) {
@@ -9299,6 +9301,8 @@ $jscomp.polyfill = function (e, r, p, m) {
         this.cancelBtn.innerHTML = this.options.i18n.cancel;
 
         if (this.options.container) {
+          var optEl = this.options.container;
+          this.options.container = optEl instanceof HTMLElement ? optEl : document.querySelector(optEl);
           this.$modalEl.appendTo(this.options.container);
         } else {
           this.$modalEl.insertBefore(this.el);
@@ -9322,6 +9326,10 @@ $jscomp.polyfill = function (e, r, p, m) {
         var _this55 = this;
 
         format = format || this.options.format;
+        if (typeof format === 'function') {
+          return format(this.date);
+        }
+
         if (!Datepicker._isDate(this.date)) {
           return '';
         }
@@ -10131,14 +10139,16 @@ $jscomp.polyfill = function (e, r, p, m) {
         this._handleClockClickStartBound = this._handleClockClickStart.bind(this);
         this._handleDocumentClickMoveBound = this._handleDocumentClickMove.bind(this);
         this._handleDocumentClickEndBound = this._handleDocumentClickEnd.bind(this);
+        this._inputFromTextFieldBound = this._handleTimeInputEnterKey.bind(this);
 
         this.el.addEventListener('click', this._handleInputClickBound);
         this.el.addEventListener('keydown', this._handleInputKeydownBound);
         this.plate.addEventListener('mousedown', this._handleClockClickStartBound);
         this.plate.addEventListener('touchstart', this._handleClockClickStartBound);
+        this.digitalClock.addEventListener('keyup', this._inputFromTextFieldBound);
 
-        $(this.spanHours).on('click', this.showView.bind(this, 'hours'));
-        $(this.spanMinutes).on('click', this.showView.bind(this, 'minutes'));
+        $(this.inputHours).on('click', this.showView.bind(this, 'hours'));
+        $(this.inputMinutes).on('click', this.showView.bind(this, 'minutes'));
       }
     }, {
       key: "_removeEventHandlers",
@@ -10157,6 +10167,14 @@ $jscomp.polyfill = function (e, r, p, m) {
         if (e.which === M.keys.ENTER) {
           e.preventDefault();
           this.open();
+        }
+      }
+    }, {
+      key: "_handleTimeInputEnterKey",
+      value: function _handleTimeInputEnterKey(e) {
+        if (e.which === M.keys.ENTER) {
+          e.preventDefault();
+          this._inputFromTextField();
         }
       }
     }, {
@@ -10234,7 +10252,8 @@ $jscomp.polyfill = function (e, r, p, m) {
         this.modalEl.id = 'modal-' + this.id;
 
         // Append popover to input by default
-        var containerEl = document.querySelector(this.options.container);
+        var optEl = this.options.container;
+        var containerEl = optEl instanceof HTMLElement ? optEl : document.querySelector(optEl);
         if (this.options.container && !!containerEl) {
           this.$modalEl.appendTo(containerEl);
         } else {
@@ -10266,11 +10285,12 @@ $jscomp.polyfill = function (e, r, p, m) {
 
         this._canvas = this.modalEl.querySelector('.timepicker-canvas');
         this.plate = this.modalEl.querySelector('.timepicker-plate');
+        this.digitalClock = this.modalEl.querySelector('.timepicker-display-column');
 
         this.hoursView = this.modalEl.querySelector('.timepicker-hours');
         this.minutesView = this.modalEl.querySelector('.timepicker-minutes');
-        this.spanHours = this.modalEl.querySelector('.timepicker-span-hours');
-        this.spanMinutes = this.modalEl.querySelector('.timepicker-span-minutes');
+        this.inputHours = this.modalEl.querySelector('.timepicker-input-hours');
+        this.inputMinutes = this.modalEl.querySelector('.timepicker-input-minutes');
         this.spanAmPm = this.modalEl.querySelector('.timepicker-span-am-pm');
         this.footer = this.modalEl.querySelector('.timepicker-footer');
         this.amOrPm = 'PM';
@@ -10425,8 +10445,8 @@ $jscomp.polyfill = function (e, r, p, m) {
         }
         this.hours = +value[0] || 0;
         this.minutes = +value[1] || 0;
-        this.spanHours.innerHTML = this.hours;
-        this.spanMinutes.innerHTML = Timepicker._addLeadingZero(this.minutes);
+        this.inputHours.value = this.hours;
+        this.inputMinutes.value = Timepicker._addLeadingZero(this.minutes);
 
         this._updateAmPmView();
       }
@@ -10441,8 +10461,8 @@ $jscomp.polyfill = function (e, r, p, m) {
             hideView = isHours ? this.minutesView : this.hoursView;
         this.currentView = view;
 
-        $(this.spanHours).toggleClass('text-primary', isHours);
-        $(this.spanMinutes).toggleClass('text-primary', !isHours);
+        $(this.inputHours).toggleClass('text-primary', isHours);
+        $(this.inputMinutes).toggleClass('text-primary', !isHours);
 
         // Transition view
         hideView.classList.add('timepicker-dial-out');
@@ -10479,6 +10499,62 @@ $jscomp.polyfill = function (e, r, p, m) {
         } else {
           this.setHand(x, y);
         }
+      }
+    }, {
+      key: "_inputFromTextField",
+      value: function _inputFromTextField() {
+        var isHours = this.currentView === 'hours';
+
+        if (isHours) {
+          var value = this['inputHours'].value;
+
+          if (value > 0 && value < 13) {
+            this.drawClockFromTimeInput(value, isHours);
+
+            this.showView('minutes', this.options.duration / 2);
+
+            this.hours = value;
+            this.inputMinutes.focus();
+          } else {
+            var hour = new Date().getHours();
+            this['inputHours'].value = hour % 12;
+          }
+        } else {
+          var _value = this['inputMinutes'].value;
+
+          if (_value >= 0 && _value < 60) {
+            this['inputMinutes'].value = Timepicker._addLeadingZero(_value);
+
+            this.drawClockFromTimeInput(_value, isHours);
+
+            this.minutes = _value;
+            this.modalEl.querySelector('.confirmation-btns :nth-child(2)').focus();
+          } else {
+            var minutes = new Date().getMinutes();
+            this['inputMinutes'].value = Timepicker._addLeadingZero(minutes);
+          }
+        }
+      }
+    }, {
+      key: "drawClockFromTimeInput",
+      value: function drawClockFromTimeInput(value, isHours) {
+        var unit = Math.PI / (isHours ? 6 : 30);
+        var radian = value * unit;
+        var radius = void 0;
+
+        if (this.options.twelveHour) {
+          radius = this.options.outerRadius;
+        }
+
+        var cx1 = Math.sin(radian) * (radius - this.options.tickRadius),
+            cy1 = -Math.cos(radian) * (radius - this.options.tickRadius),
+            cx2 = Math.sin(radian) * radius,
+            cy2 = -Math.cos(radian) * radius;
+
+        this.hand.setAttribute('x2', cx1);
+        this.hand.setAttribute('y2', cy1);
+        this.bg.setAttribute('cx', cx2);
+        this.bg.setAttribute('cy', cy2);
       }
     }, {
       key: "setHand",
@@ -10546,9 +10622,9 @@ $jscomp.polyfill = function (e, r, p, m) {
 
         this[this.currentView] = value;
         if (isHours) {
-          this['spanHours'].innerHTML = value;
+          this['inputHours'].value = value;
         } else {
-          this['spanMinutes'].innerHTML = Timepicker._addLeadingZero(value);
+          this['inputMinutes'].value = Timepicker._addLeadingZero(value);
         }
 
         // Set clock hand and others' position
@@ -10673,7 +10749,7 @@ $jscomp.polyfill = function (e, r, p, m) {
     return Timepicker;
   }(Component);
 
-  Timepicker._template = ['<div class= "modal timepicker-modal">', '<div class="modal-content timepicker-container">', '<div class="timepicker-digital-display">', '<div class="timepicker-text-container">', '<div class="timepicker-display-column">', '<span class="timepicker-span-hours text-primary"></span>', ':', '<span class="timepicker-span-minutes"></span>', '</div>', '<div class="timepicker-display-column timepicker-display-am-pm">', '<div class="timepicker-span-am-pm"></div>', '</div>', '</div>', '</div>', '<div class="timepicker-analog-display">', '<div class="timepicker-plate">', '<div class="timepicker-canvas"></div>', '<div class="timepicker-dial timepicker-hours"></div>', '<div class="timepicker-dial timepicker-minutes timepicker-dial-out"></div>', '</div>', '<div class="timepicker-footer"></div>', '</div>', '</div>', '</div>'].join('');
+  Timepicker._template = ['<div class= "modal timepicker-modal">', '<div class="modal-content timepicker-container">', '<div class="timepicker-digital-display">', '<div class="timepicker-text-container">', '<div class="timepicker-display-column">', '<input type="text" maxlength="2" autofocus class="timepicker-input-hours text-primary" />', ':', '<input type="text" maxlength="2" class="timepicker-input-minutes" />', '</div>', '<div class="timepicker-display-column timepicker-display-am-pm">', '<div class="timepicker-span-am-pm"></div>', '</div>', '</div>', '</div>', '<div class="timepicker-analog-display">', '<div class="timepicker-plate">', '<div class="timepicker-canvas"></div>', '<div class="timepicker-dial timepicker-hours"></div>', '<div class="timepicker-dial timepicker-minutes timepicker-dial-out"></div>', '</div>', '<div class="timepicker-footer"></div>', '</div>', '</div>', '</div>'].join('');
 
   M.Timepicker = Timepicker;
 
@@ -11157,7 +11233,7 @@ $jscomp.polyfill = function (e, r, p, m) {
       }
 
       /**
-       * Handle Carousel CLick
+       * Handle Carousel Click
        * @param {Event} e
        */
 
@@ -11178,7 +11254,18 @@ $jscomp.polyfill = function (e, r, p, m) {
             e.preventDefault();
             e.stopPropagation();
           }
-          this._cycleTo(clickedIndex);
+
+          // fixes https://github.com/materializecss/materialize/issues/180
+          if (clickedIndex < 0) {
+            // relative X position > center of carousel = clicked at the right part of the carousel
+            if (e.clientX - e.target.getBoundingClientRect().left > this.el.clientWidth / 2) {
+              this.next();
+            } else {
+              this.prev();
+            }
+          } else {
+            this._cycleTo(clickedIndex);
+          }
         }
       }
 
@@ -12001,67 +12088,36 @@ $jscomp.polyfill = function (e, r, p, m) {
     dropdownOptions: {}
   };
 
-  /**
-   * @class
-   *
-   */
-
   var FormSelect = function (_Component20) {
     _inherits(FormSelect, _Component20);
 
-    /**
-     * Construct FormSelect instance
-     * @constructor
-     * @param {Element} el
-     * @param {Object} options
-     */
     function FormSelect(el, options) {
       _classCallCheck(this, FormSelect);
 
-      // Don't init if browser default version
       var _this68 = _possibleConstructorReturn(this, (FormSelect.__proto__ || Object.getPrototypeOf(FormSelect)).call(this, FormSelect, el, options));
 
-      if (_this68.$el.hasClass('browser-default')) {
-        return _possibleConstructorReturn(_this68);
-      }
-
+      if (_this68.$el.hasClass('browser-default')) return _possibleConstructorReturn(_this68);
       _this68.el.M_FormSelect = _this68;
-
-      /**
-       * Options for the select
-       * @member FormSelect#options
-       */
       _this68.options = $.extend({}, FormSelect.defaults, options);
-
       _this68.isMultiple = _this68.$el.prop('multiple');
-
-      // Setup
       _this68.el.tabIndex = -1;
-      _this68._keysSelected = {};
-      _this68._valueDict = {}; // Maps key to original and generated option element.
+      _this68._values = [];
+      _this68.labelEl = null;
+      _this68._labelFor = false;
       _this68._setupDropdown();
-
       _this68._setupEventHandlers();
       return _this68;
     }
 
     _createClass(FormSelect, [{
       key: "destroy",
-
-
-      /**
-       * Teardown component
-       */
       value: function destroy() {
+        // Returns label to its original owner
+        if (this._labelFor) this.labelEl.setAttribute("for", this.el.id);
         this._removeEventHandlers();
         this._removeDropdown();
         this.el.M_FormSelect = undefined;
       }
-
-      /**
-       * Setup Event Handlers
-       */
-
     }, {
       key: "_setupEventHandlers",
       value: function _setupEventHandlers() {
@@ -12070,18 +12126,15 @@ $jscomp.polyfill = function (e, r, p, m) {
         this._handleSelectChangeBound = this._handleSelectChange.bind(this);
         this._handleOptionClickBound = this._handleOptionClick.bind(this);
         this._handleInputClickBound = this._handleInputClick.bind(this);
-
         $(this.dropdownOptions).find('li:not(.optgroup)').each(function (el) {
           el.addEventListener('click', _this69._handleOptionClickBound);
+          el.addEventListener('keydown', function (e) {
+            if (e.key === " " || e.key === "Enter") _this69._handleOptionClickBound(e);
+          });
         });
         this.el.addEventListener('change', this._handleSelectChangeBound);
         this.input.addEventListener('click', this._handleInputClickBound);
       }
-
-      /**
-       * Remove Event Handlers
-       */
-
     }, {
       key: "_removeEventHandlers",
       value: function _removeEventHandlers() {
@@ -12093,72 +12146,54 @@ $jscomp.polyfill = function (e, r, p, m) {
         this.el.removeEventListener('change', this._handleSelectChangeBound);
         this.input.removeEventListener('click', this._handleInputClickBound);
       }
-
-      /**
-       * Handle Select Change
-       * @param {Event} e
-       */
-
     }, {
       key: "_handleSelectChange",
       value: function _handleSelectChange(e) {
         this._setValueToInput();
       }
-
-      /**
-       * Handle Option Click
-       * @param {Event} e
-       */
-
     }, {
       key: "_handleOptionClick",
       value: function _handleOptionClick(e) {
         e.preventDefault();
-        var optionEl = $(e.target).closest('li')[0];
-        this._selectOption(optionEl);
+        var virtualOption = $(e.target).closest('li')[0];
+        this._selectOptionElement(virtualOption);
         e.stopPropagation();
       }
     }, {
-      key: "_selectOption",
-      value: function _selectOption(optionEl) {
-        var key = optionEl.id;
-        if (!$(optionEl).hasClass('disabled') && !$(optionEl).hasClass('optgroup') && key.length) {
-          var selected = true;
-
-          if (this.isMultiple) {
-            // Deselect placeholder option if still selected.
-            var placeholderOption = $(this.dropdownOptions).find('li.disabled.selected');
-            if (placeholderOption.length) {
-              placeholderOption.removeClass('selected');
-              placeholderOption.find('input[type="checkbox"]').prop('checked', false);
-              this._toggleEntryFromArray(placeholderOption[0].id);
-            }
-            selected = this._toggleEntryFromArray(key);
-          } else {
-            $(this.dropdownOptions).find('li').removeClass('selected');
-            $(optionEl).toggleClass('selected', selected);
-            this._keysSelected = {};
-            this._keysSelected[optionEl.id] = true;
-          }
-
-          // Set selected on original select option
-          // Only trigger if selected state changed
-          var prevSelected = $(this._valueDict[key].el).prop('selected');
-          if (prevSelected !== selected) {
-            $(this._valueDict[key].el).prop('selected', selected);
-            this.$el.trigger('change');
-          }
-        }
-
-        if (!this.isMultiple) {
-          this.dropdown.close();
-        }
+      key: "_arraysEqual",
+      value: function _arraysEqual(a, b) {
+        if (a === b) return true;
+        if (a == null || b == null) return false;
+        if (a.length !== b.length) return false;
+        for (var i = 0; i < a.length; ++i) {
+          if (a[i] !== b[i]) return false;
+        }return true;
       }
-
-      /**
-       * Handle Input Click
-       */
-
+    }, {
+      key: "_selectOptionElement",
+      value: function _selectOptionElement(virtualOption) {
+        if (!$(virtualOption).hasClass('disabled') && !$(virtualOption).hasClass('optgroup')) {
+          var value = this._values.filter(function (value) {
+            return value.optionEl === virtualOption;
+          })[0];
+          var previousSelectedValues = this.getSelectedValues();
+          if (this.isMultiple) {
+            // Multi-Select
+            this._toggleEntryFromArray(value);
+          } else {
+            // Single-Select
+            this._deselectAll();
+            this._selectValue(value);
+          }
+          // Refresh Input-Text
+          this._setValueToInput();
+          // Trigger Change-Event only when data is different
+          var actualSelectedValues = this.getSelectedValues();
+          var selectionHasChanged = !this._arraysEqual(previousSelectedValues, actualSelectedValues);
+          if (selectionHasChanged) this.$el.trigger('change');
+        }
+        if (!this.isMultiple) this.dropdown.close();
+      }
     }, {
       key: "_handleInputClick",
       value: function _handleInputClick() {
@@ -12167,11 +12202,6 @@ $jscomp.polyfill = function (e, r, p, m) {
           this._setSelectedStates();
         }
       }
-
-      /**
-       * Setup dropdown
-       */
-
     }, {
       key: "_setupDropdown",
       value: function _setupDropdown() {
@@ -12180,82 +12210,120 @@ $jscomp.polyfill = function (e, r, p, m) {
         this.wrapper = document.createElement('div');
         $(this.wrapper).addClass('select-wrapper ' + this.options.classes);
         this.$el.before($(this.wrapper));
+
         // Move actual select element into overflow hidden wrapper
         var $hideSelect = $('<div class="hide-select"></div>');
         $(this.wrapper).append($hideSelect);
         $hideSelect[0].appendChild(this.el);
 
-        if (this.el.disabled) {
-          this.wrapper.classList.add('disabled');
-        }
+        if (this.el.disabled) this.wrapper.classList.add('disabled');
 
         // Create dropdown
         this.$selectOptions = this.$el.children('option, optgroup');
         this.dropdownOptions = document.createElement('ul');
         this.dropdownOptions.id = "select-options-" + M.guid();
         $(this.dropdownOptions).addClass('dropdown-content select-dropdown ' + (this.isMultiple ? 'multiple-select-dropdown' : ''));
+        this.dropdownOptions.setAttribute("role", "listbox");
+        this.dropdownOptions.setAttribute("aria-multiselectable", this.isMultiple);
 
-        // Create dropdown structure.
+        // Create dropdown structure
         if (this.$selectOptions.length) {
-          this.$selectOptions.each(function (el) {
-            if ($(el).is('option')) {
-              // Direct descendant option.
-              var optionEl = void 0;
-              if (_this71.isMultiple) {
-                optionEl = _this71._appendOptionWithIcon(_this71.$el, el, 'multiple');
-              } else {
-                optionEl = _this71._appendOptionWithIcon(_this71.$el, el);
-              }
-
-              _this71._addOptionToValueDict(el, optionEl);
-            } else if ($(el).is('optgroup')) {
-              // Optgroup.
-              var selectOptions = $(el).children('option');
-              $(_this71.dropdownOptions).append($('<li class="optgroup"><span>' + el.getAttribute('label') + '</span></li>')[0]);
-
-              selectOptions.each(function (el) {
-                var optionEl = _this71._appendOptionWithIcon(_this71.$el, el, 'optgroup-option');
-                _this71._addOptionToValueDict(el, optionEl);
+          this.$selectOptions.each(function (realOption) {
+            if ($(realOption).is('option')) {
+              // Option
+              var virtualOption = _this71._createAndAppendOptionWithIcon(realOption, _this71.isMultiple ? 'multiple' : undefined);
+              _this71._addOptionToValues(realOption, virtualOption);
+            } else if ($(realOption).is('optgroup')) {
+              // Optgroup
+              var selectOptions = $(realOption).children('option');
+              var lId = "opt-group-" + M.guid();
+              var groupParent = $("<li class=\"optgroup\" role=\"group\" aria-labelledby=\"" + lId + "\" tabindex=\"-1\"><span id=\"" + lId + "\" role=\"presentation\">" + realOption.getAttribute('label') + "</span></li>")[0];
+              var groupChildren = [];
+              $(_this71.dropdownOptions).append(groupParent);
+              selectOptions.each(function (realOption) {
+                var virtualOption = _this71._createAndAppendOptionWithIcon(realOption, 'optgroup-option');
+                var cId = "opt-child-" + M.guid();
+                virtualOption.id = cId;
+                groupChildren.push(cId);
+                _this71._addOptionToValues(realOption, virtualOption);
               });
+              groupParent.setAttribute("aria-owns", groupChildren.join(" "));
             }
           });
         }
-
         $(this.wrapper).append(this.dropdownOptions);
 
         // Add input dropdown
         this.input = document.createElement('input');
+        this.input.id = "m_select-input-" + M.guid();
         $(this.input).addClass('select-dropdown dropdown-trigger');
         this.input.setAttribute('type', 'text');
         this.input.setAttribute('readonly', 'true');
         this.input.setAttribute('data-target', this.dropdownOptions.id);
-        if (this.el.disabled) {
-          $(this.input).prop('disabled', 'true');
+        this.input.setAttribute('aria-readonly', 'true');
+        this.input.setAttribute("aria-required", this.el.hasAttribute("required"));
+        if (this.el.disabled) $(this.input).prop('disabled', 'true');
+
+        // Makes new element to assume HTML's select label and
+        //   aria-attributes, if exists
+        if (this.el.hasAttribute("aria-labelledby")) {
+          this.labelEl = document.getElementById(this.el.getAttribute("aria-labelledby"));
+        } else if (this.el.id != "") {
+          var lbl = $("label[for='" + this.el.id + "']");
+          if (lbl.length) {
+            this.labelEl = lbl[0];
+            this.labelEl.removeAttribute("for");
+            this._labelFor = true;
+          }
         }
+        // Tries to find a valid label in parent element
+        if (!this.labelEl) {
+          var el = this.el.parentElement;
+          if (el) el = el.getElementsByTagName("label")[0];
+          if (el) this.labelEl = el;
+        }
+        if (this.labelEl && this.labelEl.id == "") {
+          this.labelEl.id = "m_select-label-" + M.guid();
+        }
+
+        if (this.labelEl) {
+          this.labelEl.setAttribute("for", this.input.id);
+          this.dropdownOptions.setAttribute("aria-labelledby", this.labelEl.id);
+        } else this.dropdownOptions.setAttribute("aria-label", "");
+
+        var attrs = this.el.attributes;
+        for (var i = 0; i < attrs.length; ++i) {
+          var attr = attrs[i];
+          if (attr.name.startsWith("aria-")) this.input.setAttribute(attr.name, attr.value);
+        }
+
+        // Adds aria-attributes to input element
+        this.input.setAttribute("role", "combobox");
+        this.input.setAttribute("aria-owns", this.dropdownOptions.id);
+        this.input.setAttribute("aria-controls", this.dropdownOptions.id);
+        this.input.setAttribute("aria-expanded", false);
 
         $(this.wrapper).prepend(this.input);
         this._setValueToInput();
 
         // Add caret
-        var dropdownIcon = $('<svg class="caret" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+        var dropdownIcon = $('<svg class="caret" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
         $(this.wrapper).prepend(dropdownIcon[0]);
-
         // Initialize dropdown
         if (!this.el.disabled) {
           var dropdownOptions = $.extend({}, this.options.dropdownOptions);
+          dropdownOptions.coverTrigger = false;
           var userOnOpenEnd = dropdownOptions.onOpenEnd;
-
+          var userOnCloseEnd = dropdownOptions.onCloseEnd;
           // Add callback for centering selected option when dropdown content is scrollable
           dropdownOptions.onOpenEnd = function (el) {
             var selectedOption = $(_this71.dropdownOptions).find('.selected').first();
-
             if (selectedOption.length) {
               // Focus selected option in dropdown
               M.keyDown = true;
               _this71.dropdown.focusedIndex = selectedOption.index();
               _this71.dropdown._focusFocusedItem();
               M.keyDown = false;
-
               // Handle scrolling to selected option
               if (_this71.dropdown.isScrollable) {
                 var scrollOffset = selectedOption[0].getBoundingClientRect().top - _this71.dropdownOptions.getBoundingClientRect().top; // scroll to selected option
@@ -12263,46 +12331,30 @@ $jscomp.polyfill = function (e, r, p, m) {
                 _this71.dropdownOptions.scrollTop = scrollOffset;
               }
             }
-
+            // Sets "aria-expanded" to "true"
+            _this71.input.setAttribute("aria-expanded", true);
             // Handle user declared onOpenEnd if needed
-            if (userOnOpenEnd && typeof userOnOpenEnd === 'function') {
-              userOnOpenEnd.call(_this71.dropdown, _this71.el);
-            }
+            if (userOnOpenEnd && typeof userOnOpenEnd === 'function') userOnOpenEnd.call(_this71.dropdown, _this71.el);
           };
-
+          // Add callback for reseting "expanded" state
+          dropdownOptions.onCloseEnd = function (el) {
+            // Sets "aria-expanded" to "false"
+            _this71.input.setAttribute("aria-expanded", false);
+            // Handle user declared onOpenEnd if needed
+            if (userOnCloseEnd && typeof userOnCloseEnd === 'function') userOnCloseEnd.call(_this71.dropdown, _this71.el);
+          };
           // Prevent dropdown from closing too early
           dropdownOptions.closeOnClick = false;
-
           this.dropdown = M.Dropdown.init(this.input, dropdownOptions);
         }
-
         // Add initial selections
         this._setSelectedStates();
       }
-
-      /**
-       * Add option to value dict
-       * @param {Element} el  original option element
-       * @param {Element} optionEl  generated option element
-       */
-
     }, {
-      key: "_addOptionToValueDict",
-      value: function _addOptionToValueDict(el, optionEl) {
-        var index = Object.keys(this._valueDict).length;
-        var key = this.dropdownOptions.id + index;
-        var obj = {};
-        optionEl.id = key;
-
-        obj.el = el;
-        obj.optionEl = optionEl;
-        this._valueDict[key] = obj;
+      key: "_addOptionToValues",
+      value: function _addOptionToValues(realOption, virtualOption) {
+        this._values.push({ el: realOption, optionEl: virtualOption });
       }
-
-      /**
-       * Remove dropdown
-       */
-
     }, {
       key: "_removeDropdown",
       value: function _removeDropdown() {
@@ -12312,161 +12364,136 @@ $jscomp.polyfill = function (e, r, p, m) {
         $(this.wrapper).before(this.$el);
         $(this.wrapper).remove();
       }
-
-      /**
-       * Setup dropdown
-       * @param {Element} select  select element
-       * @param {Element} option  option element from select
-       * @param {String} type
-       * @return {Element}  option element added
-       */
-
     }, {
-      key: "_appendOptionWithIcon",
-      value: function _appendOptionWithIcon(select, option, type) {
-        // Add disabled attr if disabled
-        var disabledClass = option.disabled ? 'disabled ' : '';
-        var optgroupClass = type === 'optgroup-option' ? 'optgroup-option ' : '';
-        var multipleCheckbox = this.isMultiple ? "<label><input type=\"checkbox\"" + disabledClass + "\"/><span>" + option.innerHTML + "</span></label>" : option.innerHTML;
-        var liEl = $('<li></li>');
-        var spanEl = $('<span></span>');
-        spanEl.html(multipleCheckbox);
-        liEl.addClass(disabledClass + " " + optgroupClass);
-        liEl.append(spanEl);
-
-        // add icons
-        var iconUrl = option.getAttribute('data-icon');
-        var classes = option.getAttribute('class');
-        if (!!iconUrl) {
-          var imgEl = $("<img alt=\"\" class=\"" + classes + "\" src=\"" + iconUrl + "\">");
-          liEl.prepend(imgEl);
+      key: "_createAndAppendOptionWithIcon",
+      value: function _createAndAppendOptionWithIcon(realOption, type) {
+        var li = document.createElement('li');
+        li.setAttribute("role", "option");
+        if (realOption.disabled) {
+          li.classList.add('disabled');
+          li.setAttribute("aria-disabled", true);
         }
-
-        // Check for multiple type.
-        $(this.dropdownOptions).append(liEl[0]);
-        return liEl[0];
+        if (type === 'optgroup-option') li.classList.add(type);
+        // Text / Checkbox
+        var span = document.createElement('span');
+        if (this.isMultiple) span.innerHTML = "<label><input type=\"checkbox\"" + (realOption.disabled ? ' disabled="disabled"' : '') + "><span>" + realOption.innerHTML + "</span></label>";else span.innerHTML = realOption.innerHTML;
+        li.appendChild(span);
+        // add Icon
+        var iconUrl = realOption.getAttribute('data-icon');
+        var classes = realOption.getAttribute('class');
+        if (iconUrl) {
+          var img = $("<img alt=\"\" class=\"" + classes + "\" src=\"" + iconUrl + "\">");
+          img[0].setAttribute("aria-hidden", true);
+          li.prepend(img[0]);
+        }
+        // Check for multiple type
+        $(this.dropdownOptions).append(li);
+        return li;
       }
+    }, {
+      key: "_selectValue",
+      value: function _selectValue(value) {
+        value.el.selected = true;
+        value.optionEl.classList.add('selected');
+        value.optionEl.setAttribute("aria-selected", true);
+        var checkbox = value.optionEl.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = true;
+      }
+    }, {
+      key: "_deselectValue",
+      value: function _deselectValue(value) {
+        value.el.selected = false;
+        value.optionEl.classList.remove('selected');
+        value.optionEl.setAttribute("aria-selected", false);
+        var checkbox = value.optionEl.querySelector('input[type="checkbox"]');
+        if (checkbox) checkbox.checked = false;
+      }
+    }, {
+      key: "_deselectAll",
+      value: function _deselectAll() {
+        var _this72 = this;
 
-      /**
-       * Toggle entry from option
-       * @param {String} key  Option key
-       * @return {Boolean}  if entry was added or removed
-       */
-
+        this._values.forEach(function (value) {
+          _this72._deselectValue(value);
+        });
+      }
+    }, {
+      key: "_isValueSelected",
+      value: function _isValueSelected(value) {
+        var realValues = this.getSelectedValues();
+        return realValues.some(function (realValue) {
+          return realValue === value.el.value;
+        });
+      }
     }, {
       key: "_toggleEntryFromArray",
-      value: function _toggleEntryFromArray(key) {
-        var notAdded = !this._keysSelected.hasOwnProperty(key);
-        var $optionLi = $(this._valueDict[key].optionEl);
-
-        if (notAdded) {
-          this._keysSelected[key] = true;
-        } else {
-          delete this._keysSelected[key];
-        }
-
-        $optionLi.toggleClass('selected', notAdded);
-
-        // Set checkbox checked value
-        $optionLi.find('input[type="checkbox"]').prop('checked', notAdded);
-
-        // use notAdded instead of true (to detect if the option is selected or not)
-        $optionLi.prop('selected', notAdded);
-
-        return notAdded;
+      value: function _toggleEntryFromArray(value) {
+        var isSelected = this._isValueSelected(value);
+        if (isSelected) this._deselectValue(value);else this._selectValue(value);
       }
-
-      /**
-       * Set text value to input
-       */
-
+    }, {
+      key: "_getSelectedOptions",
+      value: function _getSelectedOptions() {
+        return Array.prototype.filter.call(this.el.selectedOptions, function (realOption) {
+          return realOption;
+        });
+      }
     }, {
       key: "_setValueToInput",
       value: function _setValueToInput() {
-        var values = [];
-        var options = this.$el.find('option');
-
-        options.each(function (el) {
-          if ($(el).prop('selected')) {
-            var text = $(el).text().trim();
-            values.push(text);
-          }
+        var realOptions = this._getSelectedOptions();
+        var values = this._values.filter(function (value) {
+          return realOptions.indexOf(value.el) >= 0;
         });
-
-        if (!values.length) {
-          var firstDisabled = this.$el.find('option:disabled').eq(0);
-          if (firstDisabled.length && firstDisabled[0].value === '') {
-            values.push(firstDisabled.text());
+        var texts = values.map(function (value) {
+          return value.optionEl.querySelector('span').innerText.trim();
+        });
+        // Set input-text to first Option with empty value which indicates a description like "choose your option"
+        if (texts.length === 0) {
+          var firstDisabledOption = this.$el.find('option:disabled').eq(0);
+          if (firstDisabledOption.length > 0 && firstDisabledOption[0].value === '') {
+            this.input.value = firstDisabledOption.text();
+            return;
           }
         }
-
-        this.input.value = values.join(', ');
+        this.input.value = texts.join(', ');
       }
-
-      /**
-       * Set selected state of dropdown to match actual select element
-       */
-
     }, {
       key: "_setSelectedStates",
       value: function _setSelectedStates() {
-        this._keysSelected = {};
+        var _this73 = this;
 
-        for (var key in this._valueDict) {
-          var option = this._valueDict[key];
-          var optionIsSelected = $(option.el).prop('selected');
-          $(option.optionEl).find('input[type="checkbox"]').prop('checked', optionIsSelected);
+        this._values.forEach(function (value) {
+          var optionIsSelected = $(value.el).prop('selected');
+          $(value.optionEl).find('input[type="checkbox"]').prop('checked', optionIsSelected);
           if (optionIsSelected) {
-            this._activateOption($(this.dropdownOptions), $(option.optionEl));
-            this._keysSelected[key] = true;
+            _this73._activateOption($(_this73.dropdownOptions), $(value.optionEl));
           } else {
-            $(option.optionEl).removeClass('selected');
+            $(value.optionEl).removeClass('selected');
+            $(value.optionEl).attr("aria-selected", false);
           }
-        }
+        });
       }
-
-      /**
-       * Make option as selected and scroll to selected position
-       * @param {jQuery} collection  Select options jQuery element
-       * @param {Element} newOption  element of the new option
-       */
-
     }, {
       key: "_activateOption",
-      value: function _activateOption(collection, newOption) {
-        if (newOption) {
-          if (!this.isMultiple) {
-            collection.find('li.selected').removeClass('selected');
-          }
-          var option = $(newOption);
-          option.addClass('selected');
-        }
+      value: function _activateOption(ul, li) {
+        if (!li) return;
+        if (!this.isMultiple) ul.find('li.selected').removeClass('selected');
+        $(li).addClass('selected');
+        $(li).attr("aria-selected", true);
       }
-
-      /**
-       * Get Selected Values
-       * @return {Array}  Array of selected values
-       */
-
     }, {
       key: "getSelectedValues",
       value: function getSelectedValues() {
-        var selectedValues = [];
-        for (var key in this._keysSelected) {
-          selectedValues.push(this._valueDict[key].el.value);
-        }
-        return selectedValues;
+        return this._getSelectedOptions().map(function (realOption) {
+          return realOption.value;
+        });
       }
     }], [{
       key: "init",
       value: function init(els, options) {
         return _get(FormSelect.__proto__ || Object.getPrototypeOf(FormSelect), "init", this).call(this, this, els, options);
       }
-
-      /**
-       * Get Instance
-       */
-
     }, {
       key: "getInstance",
       value: function getInstance(el) {
@@ -12485,9 +12512,7 @@ $jscomp.polyfill = function (e, r, p, m) {
 
   M.FormSelect = FormSelect;
 
-  if (M.jQueryLoaded) {
-    M.initializeJqueryWrapper(FormSelect, 'formSelect', 'M_FormSelect');
-  }
+  if (M.jQueryLoaded) M.initializeJqueryWrapper(FormSelect, 'formSelect', 'M_FormSelect');
 })(cash);
 ;(function ($, anim) {
   'use strict';
@@ -12511,23 +12536,23 @@ $jscomp.polyfill = function (e, r, p, m) {
     function Range(el, options) {
       _classCallCheck(this, Range);
 
-      var _this72 = _possibleConstructorReturn(this, (Range.__proto__ || Object.getPrototypeOf(Range)).call(this, Range, el, options));
+      var _this74 = _possibleConstructorReturn(this, (Range.__proto__ || Object.getPrototypeOf(Range)).call(this, Range, el, options));
 
-      _this72.el.M_Range = _this72;
+      _this74.el.M_Range = _this74;
 
       /**
        * Options for the range
        * @member Range#options
        */
-      _this72.options = $.extend({}, Range.defaults, options);
+      _this74.options = $.extend({}, Range.defaults, options);
 
-      _this72._mousedown = false;
+      _this74._mousedown = false;
 
       // Setup
-      _this72._setupThumb();
+      _this74._setupThumb();
 
-      _this72._setupEventHandlers();
-      return _this72;
+      _this74._setupEventHandlers();
+      return _this74;
     }
 
     _createClass(Range, [{

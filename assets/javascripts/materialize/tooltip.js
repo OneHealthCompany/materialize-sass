@@ -1,17 +1,7 @@
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-var _get = function get(object, property, receiver) { if (object === null) object = Function.prototype; var desc = Object.getOwnPropertyDescriptor(object, property); if (desc === undefined) { var parent = Object.getPrototypeOf(object); if (parent === null) { return undefined; } else { return get(parent, property, receiver); } } else if ("value" in desc) { return desc.value; } else { var getter = desc.get; if (getter === undefined) { return undefined; } return getter.call(receiver); } };
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-(function ($, anim) {
+(function($, anim) {
   'use strict';
 
-  var _defaults = {
+  let _defaults = {
     exitDelay: 200,
     enterDelay: 0,
     html: null,
@@ -28,336 +18,299 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
    * @class
    *
    */
-
-  var Tooltip = function (_Component) {
-    _inherits(Tooltip, _Component);
-
+  class Tooltip extends Component {
     /**
      * Construct Tooltip instance
      * @constructor
      * @param {Element} el
      * @param {Object} options
      */
-    function Tooltip(el, options) {
-      _classCallCheck(this, Tooltip);
+    constructor(el, options) {
+      super(Tooltip, el, options);
 
-      var _this = _possibleConstructorReturn(this, (Tooltip.__proto__ || Object.getPrototypeOf(Tooltip)).call(this, Tooltip, el, options));
+      this.el.M_Tooltip = this;
+      this.options = $.extend({}, Tooltip.defaults, options);
 
-      _this.el.M_Tooltip = _this;
-      _this.options = $.extend({}, Tooltip.defaults, options);
-
-      _this.isOpen = false;
-      _this.isHovered = false;
-      _this.isFocused = false;
-      _this._appendTooltipEl();
-      _this._setupEventHandlers();
-      return _this;
+      this.isOpen = false;
+      this.isHovered = false;
+      this.isFocused = false;
+      this._appendTooltipEl();
+      this._setupEventHandlers();
     }
 
-    _createClass(Tooltip, [{
-      key: 'destroy',
+    static get defaults() {
+      return _defaults;
+    }
 
+    static init(els, options) {
+      return super.init(this, els, options);
+    }
 
-      /**
-       * Teardown component
-       */
-      value: function destroy() {
-        $(this.tooltipEl).remove();
-        this._removeEventHandlers();
-        this.el.M_Tooltip = undefined;
-      }
-    }, {
-      key: '_appendTooltipEl',
-      value: function _appendTooltipEl() {
-        var tooltipEl = document.createElement('div');
-        tooltipEl.classList.add('material-tooltip');
-        this.tooltipEl = tooltipEl;
+    /**
+     * Get Instance
+     */
+    static getInstance(el) {
+      let domElem = !!el.jquery ? el[0] : el;
+      return domElem.M_Tooltip;
+    }
 
-        var tooltipContentEl = document.createElement('div');
-        tooltipContentEl.classList.add('tooltip-content');
-        this._setTooltipContent(tooltipContentEl);
+    /**
+     * Teardown component
+     */
+    destroy() {
+      $(this.tooltipEl).remove();
+      this._removeEventHandlers();
+      this.el.M_Tooltip = undefined;
+    }
 
-        tooltipEl.appendChild(tooltipContentEl);
-        document.body.appendChild(tooltipEl);
+    _appendTooltipEl() {
+      let tooltipEl = document.createElement('div');
+      tooltipEl.classList.add('material-tooltip');
+      this.tooltipEl = tooltipEl;
+
+      let tooltipContentEl = document.createElement('div');
+      tooltipContentEl.classList.add('tooltip-content');
+      this._setTooltipContent(tooltipContentEl);
+
+      tooltipEl.appendChild(tooltipContentEl);
+      document.body.appendChild(tooltipEl);
+    }
+
+    _setTooltipContent(tooltipContentEl) {
+      tooltipContentEl.textContent = this.options.text;
+      if (!!this.options.html) {
+        // Warn when using html
+        console.warn(
+          'The html option is deprecated and will be removed in the future. See https://github.com/materializecss/materialize/pull/49'
+        );
+        $(tooltipContentEl).append(this.options.html);
       }
-    }, {
-      key: '_setTooltipContent',
-      value: function _setTooltipContent(tooltipContentEl) {
-        tooltipContentEl.textContent = this.options.text;
-        if (!!this.options.html) {
-          // Warn when using html
-          console.warn('The html option is deprecated and will be removed in the future. See https://github.com/materializecss/materialize/pull/49');
-          $(tooltipContentEl).append(this.options.html);
-        }
-        if (!!this.options.unsafeHTML) {
-          $(tooltipContentEl).append(this.options.unsafeHTML);
-        }
+      if (!!this.options.unsafeHTML) {
+        $(tooltipContentEl).append(this.options.unsafeHTML);
       }
-    }, {
-      key: '_updateTooltipContent',
-      value: function _updateTooltipContent() {
-        this._setTooltipContent(this.tooltipEl.querySelector('.tooltip-content'));
+    }
+
+    _updateTooltipContent() {
+      this._setTooltipContent(this.tooltipEl.querySelector('.tooltip-content'));
+    }
+
+    _setupEventHandlers() {
+      this._handleMouseEnterBound = this._handleMouseEnter.bind(this);
+      this._handleMouseLeaveBound = this._handleMouseLeave.bind(this);
+      this._handleFocusBound = this._handleFocus.bind(this);
+      this._handleBlurBound = this._handleBlur.bind(this);
+      this.el.addEventListener('mouseenter', this._handleMouseEnterBound);
+      this.el.addEventListener('mouseleave', this._handleMouseLeaveBound);
+      this.el.addEventListener('focus', this._handleFocusBound, true);
+      this.el.addEventListener('blur', this._handleBlurBound, true);
+    }
+
+    _removeEventHandlers() {
+      this.el.removeEventListener('mouseenter', this._handleMouseEnterBound);
+      this.el.removeEventListener('mouseleave', this._handleMouseLeaveBound);
+      this.el.removeEventListener('focus', this._handleFocusBound, true);
+      this.el.removeEventListener('blur', this._handleBlurBound, true);
+    }
+
+    open(isManual) {
+      if (this.isOpen) {
+        return;
       }
-    }, {
-      key: '_setupEventHandlers',
-      value: function _setupEventHandlers() {
-        this._handleMouseEnterBound = this._handleMouseEnter.bind(this);
-        this._handleMouseLeaveBound = this._handleMouseLeave.bind(this);
-        this._handleFocusBound = this._handleFocus.bind(this);
-        this._handleBlurBound = this._handleBlur.bind(this);
-        this.el.addEventListener('mouseenter', this._handleMouseEnterBound);
-        this.el.addEventListener('mouseleave', this._handleMouseLeaveBound);
-        this.el.addEventListener('focus', this._handleFocusBound, true);
-        this.el.addEventListener('blur', this._handleBlurBound, true);
+      isManual = isManual === undefined ? true : undefined; // Default value true
+      this.isOpen = true;
+      // Update tooltip content with HTML attribute options
+      this.options = $.extend({}, this.options, this._getAttributeOptions());
+      this._updateTooltipContent();
+      this._setEnterDelayTimeout(isManual);
+    }
+
+    close() {
+      if (!this.isOpen) {
+        return;
       }
-    }, {
-      key: '_removeEventHandlers',
-      value: function _removeEventHandlers() {
-        this.el.removeEventListener('mouseenter', this._handleMouseEnterBound);
-        this.el.removeEventListener('mouseleave', this._handleMouseLeaveBound);
-        this.el.removeEventListener('focus', this._handleFocusBound, true);
-        this.el.removeEventListener('blur', this._handleBlurBound, true);
-      }
-    }, {
-      key: 'open',
-      value: function open(isManual) {
-        if (this.isOpen) {
+
+      this.isHovered = false;
+      this.isFocused = false;
+      this.isOpen = false;
+      this._setExitDelayTimeout();
+    }
+
+    /**
+     * Create timeout which delays when the tooltip closes
+     */
+    _setExitDelayTimeout() {
+      clearTimeout(this._exitDelayTimeout);
+
+      this._exitDelayTimeout = setTimeout(() => {
+        if (this.isHovered || this.isFocused) {
           return;
         }
-        isManual = isManual === undefined ? true : undefined; // Default value true
-        this.isOpen = true;
-        // Update tooltip content with HTML attribute options
-        this.options = $.extend({}, this.options, this._getAttributeOptions());
-        this._updateTooltipContent();
-        this._setEnterDelayTimeout(isManual);
-      }
-    }, {
-      key: 'close',
-      value: function close() {
-        if (!this.isOpen) {
+
+        this._animateOut();
+      }, this.options.exitDelay);
+    }
+
+    /**
+     * Create timeout which delays when the toast closes
+     */
+    _setEnterDelayTimeout(isManual) {
+      clearTimeout(this._enterDelayTimeout);
+
+      this._enterDelayTimeout = setTimeout(() => {
+        if (!this.isHovered && !this.isFocused && !isManual) {
           return;
         }
 
-        this.isHovered = false;
-        this.isFocused = false;
-        this.isOpen = false;
-        this._setExitDelayTimeout();
+        this._animateIn();
+      }, this.options.enterDelay);
+    }
+
+    _positionTooltip() {
+      let origin = this.el,
+        tooltip = this.tooltipEl,
+        originHeight = origin.offsetHeight,
+        originWidth = origin.offsetWidth,
+        tooltipHeight = tooltip.offsetHeight,
+        tooltipWidth = tooltip.offsetWidth,
+        newCoordinates,
+        margin = this.options.margin,
+        targetTop,
+        targetLeft;
+
+      (this.xMovement = 0), (this.yMovement = 0);
+
+      targetTop = origin.getBoundingClientRect().top + M.getDocumentScrollTop();
+      targetLeft = origin.getBoundingClientRect().left + M.getDocumentScrollLeft();
+
+      if (this.options.position === 'top') {
+        targetTop += -tooltipHeight - margin;
+        targetLeft += originWidth / 2 - tooltipWidth / 2;
+        this.yMovement = -this.options.transitionMovement;
+      } else if (this.options.position === 'right') {
+        targetTop += originHeight / 2 - tooltipHeight / 2;
+        targetLeft += originWidth + margin;
+        this.xMovement = this.options.transitionMovement;
+      } else if (this.options.position === 'left') {
+        targetTop += originHeight / 2 - tooltipHeight / 2;
+        targetLeft += -tooltipWidth - margin;
+        this.xMovement = -this.options.transitionMovement;
+      } else {
+        targetTop += originHeight + margin;
+        targetLeft += originWidth / 2 - tooltipWidth / 2;
+        this.yMovement = this.options.transitionMovement;
       }
 
-      /**
-       * Create timeout which delays when the tooltip closes
-       */
+      newCoordinates = this._repositionWithinScreen(
+        targetLeft,
+        targetTop,
+        tooltipWidth,
+        tooltipHeight
+      );
+      $(tooltip).css({
+        top: newCoordinates.y + 'px',
+        left: newCoordinates.x + 'px'
+      });
+    }
 
-    }, {
-      key: '_setExitDelayTimeout',
-      value: function _setExitDelayTimeout() {
-        var _this2 = this;
+    _repositionWithinScreen(x, y, width, height) {
+      let scrollLeft = M.getDocumentScrollLeft();
+      let scrollTop = M.getDocumentScrollTop();
+      let newX = x - scrollLeft;
+      let newY = y - scrollTop;
 
-        clearTimeout(this._exitDelayTimeout);
+      let bounding = {
+        left: newX,
+        top: newY,
+        width: width,
+        height: height
+      };
 
-        this._exitDelayTimeout = setTimeout(function () {
-          if (_this2.isHovered || _this2.isFocused) {
-            return;
-          }
+      let offset = this.options.margin + this.options.transitionMovement;
+      let edges = M.checkWithinContainer(document.body, bounding, offset);
 
-          _this2._animateOut();
-        }, this.options.exitDelay);
+      if (edges.left) {
+        newX = offset;
+      } else if (edges.right) {
+        newX -= newX + width - window.innerWidth;
       }
 
-      /**
-       * Create timeout which delays when the toast closes
-       */
-
-    }, {
-      key: '_setEnterDelayTimeout',
-      value: function _setEnterDelayTimeout(isManual) {
-        var _this3 = this;
-
-        clearTimeout(this._enterDelayTimeout);
-
-        this._enterDelayTimeout = setTimeout(function () {
-          if (!_this3.isHovered && !_this3.isFocused && !isManual) {
-            return;
-          }
-
-          _this3._animateIn();
-        }, this.options.enterDelay);
+      if (edges.top) {
+        newY = offset;
+      } else if (edges.bottom) {
+        newY -= newY + height - window.innerHeight;
       }
-    }, {
-      key: '_positionTooltip',
-      value: function _positionTooltip() {
-        var origin = this.el,
-            tooltip = this.tooltipEl,
-            originHeight = origin.offsetHeight,
-            originWidth = origin.offsetWidth,
-            tooltipHeight = tooltip.offsetHeight,
-            tooltipWidth = tooltip.offsetWidth,
-            newCoordinates = void 0,
-            margin = this.options.margin,
-            targetTop = void 0,
-            targetLeft = void 0;
 
-        this.xMovement = 0, this.yMovement = 0;
+      return {
+        x: newX + scrollLeft,
+        y: newY + scrollTop
+      };
+    }
 
-        targetTop = origin.getBoundingClientRect().top + M.getDocumentScrollTop();
-        targetLeft = origin.getBoundingClientRect().left + M.getDocumentScrollLeft();
+    _animateIn() {
+      this._positionTooltip();
+      this.tooltipEl.style.visibility = 'visible';
+      anim.remove(this.tooltipEl);
+      anim({
+        targets: this.tooltipEl,
+        opacity: this.options.opacity || 1,
+        translateX: this.xMovement,
+        translateY: this.yMovement,
+        duration: this.options.inDuration,
+        easing: 'easeOutCubic'
+      });
+    }
 
-        if (this.options.position === 'top') {
-          targetTop += -tooltipHeight - margin;
-          targetLeft += originWidth / 2 - tooltipWidth / 2;
-          this.yMovement = -this.options.transitionMovement;
-        } else if (this.options.position === 'right') {
-          targetTop += originHeight / 2 - tooltipHeight / 2;
-          targetLeft += originWidth + margin;
-          this.xMovement = this.options.transitionMovement;
-        } else if (this.options.position === 'left') {
-          targetTop += originHeight / 2 - tooltipHeight / 2;
-          targetLeft += -tooltipWidth - margin;
-          this.xMovement = -this.options.transitionMovement;
-        } else {
-          targetTop += originHeight + margin;
-          targetLeft += originWidth / 2 - tooltipWidth / 2;
-          this.yMovement = this.options.transitionMovement;
-        }
+    _animateOut() {
+      anim.remove(this.tooltipEl);
+      anim({
+        targets: this.tooltipEl,
+        opacity: 0,
+        translateX: 0,
+        translateY: 0,
+        duration: this.options.outDuration,
+        easing: 'easeOutCubic'
+      });
+    }
 
-        newCoordinates = this._repositionWithinScreen(targetLeft, targetTop, tooltipWidth, tooltipHeight);
-        $(tooltip).css({
-          top: newCoordinates.y + 'px',
-          left: newCoordinates.x + 'px'
-        });
-      }
-    }, {
-      key: '_repositionWithinScreen',
-      value: function _repositionWithinScreen(x, y, width, height) {
-        var scrollLeft = M.getDocumentScrollLeft();
-        var scrollTop = M.getDocumentScrollTop();
-        var newX = x - scrollLeft;
-        var newY = y - scrollTop;
+    _handleMouseEnter() {
+      this.isHovered = true;
+      this.isFocused = false; // Allows close of tooltip when opened by focus.
+      this.open(false);
+    }
 
-        var bounding = {
-          left: newX,
-          top: newY,
-          width: width,
-          height: height
-        };
+    _handleMouseLeave() {
+      this.isHovered = false;
+      this.isFocused = false; // Allows close of tooltip when opened by focus.
+      this.close();
+    }
 
-        var offset = this.options.margin + this.options.transitionMovement;
-        var edges = M.checkWithinContainer(document.body, bounding, offset);
-
-        if (edges.left) {
-          newX = offset;
-        } else if (edges.right) {
-          newX -= newX + width - window.innerWidth;
-        }
-
-        if (edges.top) {
-          newY = offset;
-        } else if (edges.bottom) {
-          newY -= newY + height - window.innerHeight;
-        }
-
-        return {
-          x: newX + scrollLeft,
-          y: newY + scrollTop
-        };
-      }
-    }, {
-      key: '_animateIn',
-      value: function _animateIn() {
-        this._positionTooltip();
-        this.tooltipEl.style.visibility = 'visible';
-        anim.remove(this.tooltipEl);
-        anim({
-          targets: this.tooltipEl,
-          opacity: this.options.opacity || 1,
-          translateX: this.xMovement,
-          translateY: this.yMovement,
-          duration: this.options.inDuration,
-          easing: 'easeOutCubic'
-        });
-      }
-    }, {
-      key: '_animateOut',
-      value: function _animateOut() {
-        anim.remove(this.tooltipEl);
-        anim({
-          targets: this.tooltipEl,
-          opacity: 0,
-          translateX: 0,
-          translateY: 0,
-          duration: this.options.outDuration,
-          easing: 'easeOutCubic'
-        });
-      }
-    }, {
-      key: '_handleMouseEnter',
-      value: function _handleMouseEnter() {
-        this.isHovered = true;
-        this.isFocused = false; // Allows close of tooltip when opened by focus.
+    _handleFocus() {
+      if (M.tabPressed) {
+        this.isFocused = true;
         this.open(false);
       }
-    }, {
-      key: '_handleMouseLeave',
-      value: function _handleMouseLeave() {
-        this.isHovered = false;
-        this.isFocused = false; // Allows close of tooltip when opened by focus.
-        this.close();
-      }
-    }, {
-      key: '_handleFocus',
-      value: function _handleFocus() {
-        if (M.tabPressed) {
-          this.isFocused = true;
-          this.open(false);
-        }
-      }
-    }, {
-      key: '_handleBlur',
-      value: function _handleBlur() {
-        this.isFocused = false;
-        this.close();
-      }
-    }, {
-      key: '_getAttributeOptions',
-      value: function _getAttributeOptions() {
-        var attributeOptions = {};
-        var tooltipTextOption = this.el.getAttribute('data-tooltip');
-        var positionOption = this.el.getAttribute('data-position');
+    }
 
-        if (tooltipTextOption) {
-          attributeOptions.text = tooltipTextOption;
-        }
+    _handleBlur() {
+      this.isFocused = false;
+      this.close();
+    }
 
-        if (positionOption) {
-          attributeOptions.position = positionOption;
-        }
-        return attributeOptions;
-      }
-    }], [{
-      key: 'init',
-      value: function init(els, options) {
-        return _get(Tooltip.__proto__ || Object.getPrototypeOf(Tooltip), 'init', this).call(this, this, els, options);
+    _getAttributeOptions() {
+      let attributeOptions = {};
+      let tooltipTextOption = this.el.getAttribute('data-tooltip');
+      let positionOption = this.el.getAttribute('data-position');
+
+      if (tooltipTextOption) {
+        attributeOptions.text = tooltipTextOption;
       }
 
-      /**
-       * Get Instance
-       */
-
-    }, {
-      key: 'getInstance',
-      value: function getInstance(el) {
-        var domElem = !!el.jquery ? el[0] : el;
-        return domElem.M_Tooltip;
+      if (positionOption) {
+        attributeOptions.position = positionOption;
       }
-    }, {
-      key: 'defaults',
-      get: function () {
-        return _defaults;
-      }
-    }]);
-
-    return Tooltip;
-  }(Component);
+      return attributeOptions;
+    }
+  }
 
   M.Tooltip = Tooltip;
 
